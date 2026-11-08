@@ -93,6 +93,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .confirmbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--warn-soft);color:var(--warn);padding:8px 10px;border-radius:8px;font-size:14px;font-weight:700}
 @media (prefers-reduced-motion:no-preference){.chip,.tabs button{transition:background .15s}}
 </style>
+<style>
+#sheet .day + .day{margin-top:18px}
+.wkinfo{font-weight:800;color:var(--accent)}
+.sess .dtag{font-family:var(--f-display);font-size:19px;color:var(--accent)}
+.sched{display:flex;flex-direction:column;gap:6px}
+.sched .it{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:8px}
+</style>
 
 <div class="wrap">
   <header class="top">
@@ -101,7 +108,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <p class="sub">밴드 신청 명단 → 장소별 팀 · 2인 1조 교대 자동 편성</p>
     </div>
     <div class="tabs" role="tablist">
-      <button role="tab" id="tab-plan" aria-selected="true">계획표</button>
+      <button role="tab" id="tab-wd" aria-selected="true">주중</button>
+      <button role="tab" id="tab-we" aria-selected="false">주말</button>
       <button role="tab" id="tab-set" aria-selected="false">기본 설정</button>
     </div>
   </header>
@@ -109,14 +117,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   <main id="view-plan" style="display:flex;flex-direction:column;gap:16px">
     <section class="panel">
       <div class="row">
-        <label class="f">봉사 날짜<input type="date" id="date"></label>
-        <span class="pill" id="daykind"></span>
+        <label class="f">어느 주인가요? (그 주의 아무 날짜)<input type="date" id="week"></label>
+        <span class="wkinfo" id="wkinfo"></span>
         <button class="b ghost sm" id="addSess">+ 시간대 추가</button>
       </div>
       <div id="sessions" style="display:flex;flex-direction:column;gap:12px"></div>
       <div class="row">
-        <button class="b" id="genAll">자동 편성</button>
-        <span class="legend">밴드 투표 참여자 명단을 시간대별 칸에 그대로 붙여넣으세요. 등록된 이름을 찾아 자동으로 인식합니다.</span>
+        <button class="b" id="genAll">한꺼번에 자동 편성</button>
+        <span class="legend">요일·시간대마다 밴드 투표 참여자 명단을 붙여넣으세요. 같은 주 안에서도 같은 짝이 겹치지 않게 편성합니다.</span>
       </div>
     </section>
 
@@ -134,12 +142,23 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <button class="b" id="toImg">이미지 만들기</button>
         </div>
       </div>
-      <p class="legend" style="margin:0">확정하면 이번 편성이 기록되어, 다음 주에는 같은 짝·같은 팀이 되지 않도록 반영됩니다.</p>
+      <p class="legend" style="margin:0">확정하면 이번 편성이 기록되어, 다음 편성에서 같은 짝·같은 팀이 되지 않도록 반영됩니다. 주중을 먼저 확정한 뒤 주말을 편성하면 주중 짝도 피해서 편성됩니다.</p>
       <div class="sheet-scroll"><div id="sheet"></div></div>
     </section>
   </main>
 
   <main id="view-set" hidden style="display:flex;flex-direction:column;gap:16px">
+    <section class="panel">
+      <h2>봉사 요일 · 시간</h2>
+      <p class="legend" style="margin:0">주중·주말 메뉴를 열면 여기 정한 요일과 시간대가 자동으로 준비됩니다.</p>
+      <h3>주중</h3>
+      <div class="sched" id="schWd"></div>
+      <div class="row"><button class="b ghost sm" data-addsch="wd">+ 주중 시간대 추가</button></div>
+      <h3>주말</h3>
+      <div class="sched" id="schWe"></div>
+      <div class="row"><button class="b ghost sm" data-addsch="we">+ 주말 시간대 추가</button></div>
+    </section>
+
     <section class="panel">
       <h2>전시대 이동 형제 (순위)</h2>
       <p class="legend" style="margin:0">위에서부터 먼저 팀에 배정됩니다. 배우자가 같은 시간대에 신청했으면 부부가 첫 짝이 됩니다.</p>
@@ -152,22 +171,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <p class="legend" style="margin:0">위에서부터 순서대로 팀이 배정되고, 전시대 번호도 1·2번, 3·4번 순으로 붙습니다. "3인 허용"인 곳에 남는 인원이 먼저 들어갑니다.</p>
       <div class="ord" id="locList"></div>
       <div class="row"><input id="locNew" placeholder="새 장소 이름"><button class="b sm" id="locAddBtn">장소 추가</button></div>
-    </section>
-
-    <section class="panel">
-      <h2>기본 시간 설정</h2>
-      <div class="row">
-        <label class="f">주말 1부 시작<input type="time" id="wkA1"></label>
-        <label class="f">주말 1부 끝<input type="time" id="wkA2"></label>
-        <label class="f">주말 2부 시작<input type="time" id="wkB1"></label>
-        <label class="f">주말 2부 끝<input type="time" id="wkB2"></label>
-        <label class="f">주말 교대 수<select id="wkRot"><option value="2">2교대</option><option value="3">3교대</option></select></label>
-      </div>
-      <div class="row">
-        <label class="f">주중 시작<input type="time" id="wdS"></label>
-        <label class="f">주중 끝<input type="time" id="wdE"></label>
-        <label class="f">주중 교대 수<select id="wdRot"><option value="2">2교대</option><option value="3">3교대</option></select></label>
-      </div>
     </section>
 
     <section class="panel">
@@ -202,7 +205,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   <div class="box">
     <div class="row" style="justify-content:space-between"><h2 style="font-family:var(--f-display);font-weight:400;margin:0">밴드 게시용 이미지</h2><button class="b ghost sm" id="imgClose">닫기</button></div>
     <p class="legend" style="margin:0">휴대폰: 이미지를 길게 눌러 "이미지 저장" 후 밴드에 올리세요. 컴퓨터: 이미지에서 오른쪽 클릭 → 이미지 저장.</p>
-    <img id="imgOut" alt="완성된 전시대봉사 계획표 이미지">
+    <div id="imgOut" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -215,6 +218,12 @@ const $=id=>document.getElementById(id);
 const DAYS=['일','월','화','수','목','금','토'];
 
 /* ---------- 기본 데이터 ---------- */
+function defSchedule(){
+  return {
+    wd:[{dow:3,start:'18:00',end:'20:00',rot:2},{dow:5,start:'18:00',end:'20:00',rot:2}],
+    we:[{dow:6,start:'08:00',end:'10:00',rot:3},{dow:6,start:'10:00',end:'12:00',rot:3}]
+  };
+}
 function defaults(){
   const M=['김성한','고은혁','김영호','김인환','김종혁','김하늘','서귀원','안도영','박성우','이주영','조현희','이상민','최지훈','고상우','김선진','조준일','이정수','최용원','이종수','황인주'];
   const F=['권정혁','김경아','김길순','김길연','김매희','김미자','김미정','김민이','김여진','김은영','김응순','김인숙','김진순','김현아','노상순','민광옥','민종숙','박소은','박하은','신경숙','임진화','장옥미','장진숙','장태현','정경란','조선자','최이랑','황영란','황은률'];
@@ -226,14 +235,16 @@ function defaults(){
     locations:[
       {name:'터미널(광장)',on:true,allow3:true},{name:'터미널(메가)',on:true,allow3:false},{name:'터미널(연세)',on:true,allow3:true},
       {name:'터미널(하이마트맞은편)',on:true,allow3:false},{name:'칠금동 복지센터',on:true,allow3:false},{name:'대가미공원(산책로쪽)',on:true,allow3:false}],
-    times:{wkA:['08:00','10:00'],wkB:['10:00','12:00'],wkRot:3,wd:['09:00','10:30'],wdRot:2,slot:15},
+    schedule:defSchedule(),
     history:[]
   };
 }
 let S;
 try{ S=JSON.parse(localStorage.getItem(LS)||'null'); }catch(e){ S=null; }
 if(!S||!S.members) S=defaults();
+if(!S.schedule){ S.schedule=defSchedule(); delete S.times; }
 function save(){ try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(e){} }
+save();
 
 const mem=n=>S.members.find(m=>m.name===n);
 const gOf=n=>(mem(n)||{}).g;
@@ -243,28 +254,38 @@ const isMover=n=>S.movers.includes(n);
 function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>el.hidden=true,2200);}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
-/* ---------- 계획 상태 ---------- */
-let plan={date:'',sessions:[]};
+/* ---------- 날짜 ---------- */
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const parse=s=>new Date(s+'T00:00');
+function mondayOf(s){const d=parse(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return iso(d);}
+function dateFor(monday,dow){const d=parse(monday);d.setDate(d.getDate()+((dow+6)%7));return iso(d);}
+const md=s=>{const d=parse(s);return `${d.getMonth()+1}월${d.getDate()}일`;};
+const dowOf=s=>parse(s).getDay();
+
+/* ---------- 계획 상태 (주중 / 주말 따로) ---------- */
+let mode='wd';
+const plans={wd:{monday:'',sessions:[]},we:{monday:'',sessions:[]}};
+const P=()=>plans[mode];
 let uid=1;
-function isWeekend(d){const w=new Date(d+'T00:00').getDay();return w===0||w===6;}
-function newSess(label,s,e,rot,text){return {id:uid++,label,start:s,end:e,rot:rot,slot:S.times.slot,text:text||'',result:null};}
-function resetSessions(sample){
-  const t=S.times;
-  if(isWeekend(plan.date)){
-    plan.sessions=[newSess('1부',t.wkA[0],t.wkA[1],t.wkRot,sample?sampleText(0):''),newSess('2부',t.wkB[0],t.wkB[1],t.wkRot,sample?sampleText(1):'')];
-  }else{
-    plan.sessions=[newSess('',t.wd[0],t.wd[1],t.wdRot,sample?sampleText(0):'')];
-  }
+function newSess(monday,sc,text){return {id:uid++,dow:sc.dow,date:dateFor(monday,sc.dow),start:sc.start,end:sc.end,rot:sc.rot,text:text||'',result:null,msg:null};}
+function setupWeek(m,monday,sample){
+  plans[m].monday=monday;
+  plans[m].sessions=S.schedule[m].map((sc,i)=>newSess(monday,sc,sample?sampleText(i+(m==='we'?2:0)):''));
 }
 function sampleText(k){
-  // 예시: 밴드 투표 참여자 목록을 복사한 것처럼 보이는 예시 텍스트
   const all=S.members.map(m=>m.name);
   const pick=all.filter((_,i)=>(i+k)%3!==0);
   return '[예시] 투표 참여자\n'+pick.map(n=>n+'님').join('\n');
 }
+function timeLabel(s){
+  const [h1,m1]=s.start.split(':').map(Number), [h2,m2]=s.end.split(':').map(Number);
+  return (m1===0&&m2===0)?`${h1}–${h2}시`:`${h1}:${String(m1).padStart(2,'0')}–${h2}:${String(m2).padStart(2,'0')}`;
+}
+const sessTitle=s=>`${md(s.date)} (${DAYS[s.dow]}) ${timeLabel(s)}`;
+const sortSess=arr=>arr.slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
 
 /* ---------- 명단 인식 ---------- */
-const STOP=new Set(['예시','투표','참여','참여자','신청','신청자','명단','참석','불참','선택','항목','주말','주중','오전','오후','형제','자매','시간','전시대','봉사','님']);
+const STOP=new Set(['예시','투표','참여','참여자','신청','신청자','명단','참석','불참','선택','항목','주말','주중','오전','오후','형제','자매','시간','전시대','봉사','님','수요일','금요일','토요일']);
 function parseNames(text){
   const found=new Set();
   const names=S.members.map(m=>m.name).sort((a,b)=>b.length-a.length);
@@ -275,39 +296,40 @@ function parseNames(text){
 }
 
 /* ---------- 지난 기록 점수 ---------- */
-function histScores(){
-  const pair={},team={};
-  const h=S.history.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12);
-  h.forEach((r,age)=>{
-    const w=Math.pow(0.8,age);
-    r.groups.forEach(g=>{for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){const k=key(g[i],g[j]);pair[k]=(pair[k]||0)+w;}});
-    r.teams.forEach(t=>{for(let i=0;i<t.length;i++)for(let j=i+1;j<t.length;j++){const k=key(t[i],t[j]);team[k]=(team[k]||0)+w;}});
-  });
-  return {pair,team};
-}
 const key=(a,b)=>a<b?a+'|'+b:b+'|'+a;
 const couple=(a,b)=>spouseOf(a)===b;
+function histScores(extra){
+  const pair={},team={};
+  const add=(r,w)=>{
+    r.groups.forEach(g=>{for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){const k=key(g[i],g[j]);pair[k]=(pair[k]||0)+w;}});
+    r.teams.forEach(t=>{for(let i=0;i<t.length;i++)for(let j=i+1;j<t.length;j++){const k=key(t[i],t[j]);team[k]=(team[k]||0)+w;}});
+  };
+  (extra||[]).forEach(r=>add(r,1.2));  // 같은 주에 방금 편성한 다른 요일
+  S.history.slice().sort((a,b)=>b.id.localeCompare(a.id)).slice(0,16).forEach((r,age)=>add(r,Math.pow(0.85,age)));
+  return {pair,team};
+}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const recOf=s=>({groups:s.result.teams.flatMap(t=>t.pairs.filter(p=>p.length>1)),teams:s.result.teams.map(t=>t.pairs.flat())});
 
 /* ---------- 자동 편성 ---------- */
-function generate(sess){
+function generate(sess,extra){
   const {names,unknown}=parseNames(sess.text);
   const warns=[],infos=[];
   const rot=+sess.rot, per=rot*2, N=names.length;
   const locs=S.locations.filter(l=>l.on);
   const movers=S.movers.filter(n=>names.includes(n));
-  if(N===0){ sess.result=null; sess.msg={warns:['신청자 명단에서 등록된 이름을 찾지 못했습니다.'],infos:[],unknown,N}; return; }
+  if(N===0){ sess.result=null; sess.msg={warns:['신청자 명단에서 등록된 이름을 찾지 못했습니다.'],infos:[],unknown}; return; }
   let L=Math.min(locs.length,Math.max(1,Math.floor(N/per)));
   if(movers.length<L){ if(movers.length===0) warns.push('신청자 중 전시대 이동 형제가 없습니다.'); else warns.push(`이동 형제가 ${movers.length}명뿐이라 ${movers.length}개 장소로 편성했습니다.`); L=Math.max(1,Math.min(L,movers.length||1)); }
-  const H=histScores();
+  const H=histScores(extra);
   let best=null;
   for(let t=0;t<500;t++){ const r=trial(names,movers.slice(0,L),L,rot,locs,H); if(!best||r.score<best.score) best=r; }
   best.teams.forEach((tm,i)=>{tm.loc=locs[i].name;tm.carts=[2*i+1,2*i+2];});
   sess.result={teams:best.teams,bench:best.bench};
   infos.push(`신청 ${N}명 · ${L}개 장소 · ${rot}교대`);
-  if(N>L*per) infos.push(`인원이 남아 일부 조는 3명으로 편성했습니다.`);
-  if(N<L*per) infos.push(`빈 교대가 있습니다. 필요하면 수정하세요.`);
-  sess.msg={warns,infos,unknown,N};
+  if(N>L*per) infos.push('인원이 남아 일부 조는 3명으로 편성했습니다.');
+  if(N<L*per) infos.push('빈 교대가 있습니다. 필요하면 수정하세요.');
+  sess.msg={warns,infos,unknown};
 }
 function trial(names,movers,L,rot,locs,H){
   const pool=new Set(names); const teams=[];
@@ -318,7 +340,6 @@ function trial(names,movers,L,rot,locs,H){
     teams.push(tm);
   }
   const ps=(a,b)=>(H.pair[key(a,b)]||0)*10+Math.random()*0.5;
-  // 혼자인 이동 형제의 짝: 형제 중에서
   teams.forEach(tm=>{
     const p=tm.pairs[0]; if(!p||p.length!==1) return;
     const cands=[...pool].filter(n=>gOf(n)==='M');
@@ -333,20 +354,14 @@ function trial(names,movers,L,rot,locs,H){
   }
   const pairUp=arr=>{const out=[];const a=arr.slice();while(a.length){const x=a.shift();if(!a.length){out.push([x]);break;}let bi=0,bs=1e9;a.forEach((y,i)=>{const s=ps(x,y);if(s<bs){bs=s;bi=i;}});out.push([x,a.splice(bi,1)[0]]);}return out;};
   pairs.push(...pairUp(B),...pairUp(F));
-  // 남는 1명은 같은 성별 조에 3번째로
   const singles=pairs.filter(p=>p.length===1);
-  let groups=pairs.filter(p=>p.length>1);
-  shuffle(groups);
-  const slots=[]; teams.forEach((tm,i)=>{for(let k=tm.pairs.length;k<rot;k++) slots.push(i);});
-  // 팀마다 고르게: 라운드로빈 순서로 슬롯 정렬
-  slots.sort((a,b)=>teams[a].pairs.length-teams[b].pairs.length||a-b);
+  const groups=shuffle(pairs.filter(p=>p.length>1));
   const order=[];const need=teams.map(tm=>rot-tm.pairs.length);
   for(let r=0;r<rot;r++) teams.forEach((tm,i)=>{if(need[i]>0){order.push(i);need[i]--;}});
   const extra=[];
   groups.forEach((g,k)=>{ if(k<order.length) teams[order[k]].pairs.push(g); else extra.push(...g); });
   singles.forEach(s=>extra.push(s[0]));
   const bench=[];
-  // 3인 허용 장소 우선
   const tOrder=teams.map((_,i)=>i).sort((a,b)=>(locs[b].allow3?1:0)-(locs[a].allow3?1:0)||Math.random()-.5);
   extra.forEach(n=>{
     let done=false;
@@ -354,12 +369,9 @@ function trial(names,movers,L,rot,locs,H){
       const cand=teams[ti].pairs.filter((p,pi)=>p.length===2&&p.every(x=>gOf(x)===gOf(n))&&!(pi===0&&couple(p[0],p[1])));
       if(cand.length){cand.sort((a,b)=>ps(n,a[0])+ps(n,a[1])-ps(n,b[0])-ps(n,b[1]));cand[0].push(n);done=true;break;}
     }
-    if(!done){ // 빈 교대가 있으면 그 자리에
-      const t=teams.find(tm=>tm.pairs.length<rot); if(t){t.pairs.push([n]);done=true;}
-    }
+    if(!done){ const t=teams.find(tm=>tm.pairs.length<rot); if(t){t.pairs.push([n]);done=true;} }
     if(!done) bench.push(n);
   });
-  // 점수
   let score=0;
   teams.forEach(tm=>{
     tm.pairs.forEach(g=>{for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){if(!couple(g[i],g[j])) score+=(H.pair[key(g[i],g[j])]||0)*10;} if(g.length===3) score+=1;});
@@ -373,27 +385,35 @@ function trial(names,movers,L,rot,locs,H){
 /* ---------- 화면: 시간대 입력 ---------- */
 function renderSessions(){
   const box=$('sessions'); box.innerHTML='';
-  plan.sessions.forEach(s=>{
+  const p=P();
+  const mon=parse(p.monday), sun=parse(p.monday); sun.setDate(sun.getDate()+6);
+  $('week').value=p.monday;
+  $('wkinfo').textContent=`${mon.getMonth()+1}월${mon.getDate()}일(월) ~ ${sun.getMonth()+1}월${sun.getDate()}일(일)`;
+  if(!p.sessions.length) box.innerHTML='<span class="legend">시간대가 없습니다. "+ 시간대 추가"를 누르거나 기본 설정에서 요일·시간을 정하세요.</span>';
+  sortSess(p.sessions).forEach(s=>{
     const d=document.createElement('div'); d.className='sess';
     d.innerHTML=`
       <div class="sess-head">
-        <div class="row">
-          <label class="f">이름<input id="lb${s.id}" value="${esc(s.label)}" placeholder="예: 1부" style="width:90px"></label>
-          <label class="f">시작<input type="time" id="st${s.id}" value="${s.start}"></label>
-          <label class="f">끝<input type="time" id="en${s.id}" value="${s.end}"></label>
-          <label class="f">교대<select id="rt${s.id}"><option value="2"${s.rot==2?' selected':''}>2교대</option><option value="3"${s.rot==3?' selected':''}>3교대</option></select></label>
-        </div>
-        ${plan.sessions.length>1?`<button class="b warn sm" data-del="${s.id}">시간대 삭제</button>`:''}
+        <span class="dtag">${esc(sessTitle(s))}</span>
+        <button class="b warn sm" data-del="${s.id}">시간대 삭제</button>
+      </div>
+      <div class="row">
+        <label class="f">요일<select id="dw${s.id}">${[1,2,3,4,5,6,0].map(w=>`<option value="${w}"${w==s.dow?' selected':''}>${DAYS[w]}요일</option>`).join('')}</select></label>
+        <label class="f">시작<input type="time" id="st${s.id}" value="${s.start}"></label>
+        <label class="f">끝<input type="time" id="en${s.id}" value="${s.end}"></label>
+        <label class="f">교대<select id="rt${s.id}"><option value="2"${s.rot==2?' selected':''}>2교대</option><option value="3"${s.rot==3?' selected':''}>3교대</option></select></label>
       </div>
       <label class="f">신청자 (밴드 투표 명단 붙여넣기)<textarea id="tx${s.id}">${esc(s.text)}</textarea></label>
       <div class="msgs" id="ms${s.id}"></div>`;
     box.appendChild(d);
-    const bind=(p,f)=>$(p+s.id).addEventListener('change',e=>{s[f]=e.target.value;if(f==='text'||f==='rot')renderMsg(s,true);else renderAll();});
-    bind('lb','label');bind('st','start');bind('en','end');bind('rt','rot');
+    $('dw'+s.id).onchange=e=>{s.dow=+e.target.value;s.date=dateFor(p.monday,s.dow);renderSessions();renderAll();};
+    $('st'+s.id).onchange=e=>{s.start=e.target.value;renderSessions();renderAll();};
+    $('en'+s.id).onchange=e=>{s.end=e.target.value;renderSessions();renderAll();};
+    $('rt'+s.id).onchange=e=>{s.rot=+e.target.value;renderMsg(s,true);};
     $('tx'+s.id).addEventListener('input',e=>{s.text=e.target.value;renderMsg(s,true);});
     renderMsg(s);
   });
-  box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{plan.sessions=plan.sessions.filter(x=>x.id!=b.dataset.del);renderSessions();renderAll();});
+  box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{p.sessions=p.sessions.filter(x=>x.id!=b.dataset.del);renderSessions();renderAll();});
 }
 function renderMsg(s,live){
   const el=$('ms'+s.id); if(!el) return;
@@ -405,21 +425,21 @@ function renderMsg(s,live){
 }
 
 /* ---------- 화면: 편집 보드 ---------- */
-let sel=null; // {sid, t, p, k} 또는 {sid, bench:true, k}
+let sel=null;
+const sess=id=>P().sessions.find(s=>s.id===id);
 function renderBoards(){
   const box=$('boards'); box.innerHTML='';
-  const any=plan.sessions.some(s=>s.result);
-  $('editPanel').hidden=!any; $('sheetPanel').hidden=!any;
-  plan.sessions.forEach(s=>{
-    if(!s.result) return;
+  const ss=sortSess(P().sessions).filter(s=>s.result);
+  $('editPanel').hidden=!ss.length; $('sheetPanel').hidden=!ss.length;
+  const locNames=S.locations.map(l=>l.name);
+  ss.forEach(s=>{
     const wrap=document.createElement('div'); wrap.style.cssText='display:flex;flex-direction:column;gap:8px';
     wrap.innerHTML=`<h3>${esc(sessTitle(s))}</h3>`;
     const board=document.createElement('div'); board.className='board';
-    const locNames=S.locations.map(l=>l.name);
     s.result.teams.forEach((tm,ti)=>{
       const c=document.createElement('div'); c.className='team';
-      let h=`<select data-loc="${ti}">${locNames.map(n=>`<option${n===tm.loc?' selected':''}>${esc(n)}</option>`).join('')}</select>
-        <div class="row" style="gap:6px"><span class="legend">전시대</span><input data-cart="${ti}" value="${tm.carts.join(',')}" style="width:70px;padding:3px 6px"></div>`;
+      let h=`<select data-loc="${s.id}|${ti}">${locNames.map(n=>`<option${n===tm.loc?' selected':''}>${esc(n)}</option>`).join('')}</select>
+        <div class="row" style="gap:6px"><span class="legend">전시대</span><input data-cart="${s.id}|${ti}" value="${tm.carts.join(',')}" style="width:70px;padding:3px 6px"></div>`;
       tm.pairs.forEach((p,pi)=>{
         h+=`<div class="prow"><span class="idx">${pi+1}교대</span>${p.map((n,k)=>chip(s.id,n,{t:ti,p:pi,k})).join('')}<button class="slotadd" data-mv="${s.id}|${ti}|${pi}" aria-label="여기로 옮기기">＋</button>${p.length===0?`<button class="slotadd" data-rm="${s.id}|${ti}|${pi}">줄 삭제</button>`:''}</div>`;
       });
@@ -432,33 +452,25 @@ function renderBoards(){
     wrap.appendChild(bench);
     box.appendChild(wrap);
   });
+  const sp=v=>v.split('|').map(Number);
   box.querySelectorAll('[data-chip]').forEach(b=>b.onclick=()=>onChip(JSON.parse(b.dataset.chip)));
-  box.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{const [sid,t,p]=b.dataset.mv.split('|').map(Number);moveTo(sid,{t,p});});
+  box.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{const [sid,t,p]=sp(b.dataset.mv);moveTo(sid,{t,p});});
   box.querySelectorAll('[data-mvb]').forEach(b=>b.onclick=()=>moveTo(+b.dataset.mvb,{bench:true}));
-  box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{const [sid,t,p]=b.dataset.rm.split('|').map(Number);const s=sess(sid);s.result.teams[t].pairs.splice(p,1);renderAll();});
-  box.querySelectorAll('[data-addrow]').forEach(b=>b.onclick=()=>{const [sid,t]=b.dataset.addrow.split('|').map(Number);sess(sid).result.teams[t].pairs.push([]);renderAll();});
-  plan.sessions.forEach(s=>{ if(!s.result) return;
-    box.querySelectorAll('select[data-loc]').forEach(()=>{});
-  });
-  // 장소/전시대 변경
-  let si=0;
-  box.querySelectorAll(':scope > div').forEach(w=>{
-    const s=plan.sessions.filter(x=>x.result)[si++];
-    w.querySelectorAll('select[data-loc]').forEach(sl=>sl.onchange=()=>{s.result.teams[+sl.dataset.loc].loc=sl.value;renderSheet();});
-    w.querySelectorAll('input[data-cart]').forEach(ip=>ip.onchange=()=>{s.result.teams[+ip.dataset.cart].carts=ip.value.split(/[,\s]+/).filter(Boolean);renderSheet();});
-  });
+  box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{const [sid,t,p]=sp(b.dataset.rm);sess(sid).result.teams[t].pairs.splice(p,1);renderAll();});
+  box.querySelectorAll('[data-addrow]').forEach(b=>b.onclick=()=>{const [sid,t]=sp(b.dataset.addrow);sess(sid).result.teams[t].pairs.push([]);renderAll();});
+  box.querySelectorAll('select[data-loc]').forEach(e=>e.onchange=()=>{const [sid,t]=sp(e.dataset.loc);sess(sid).result.teams[t].loc=e.value;renderSheet();});
+  box.querySelectorAll('input[data-cart]').forEach(e=>e.onchange=()=>{const [sid,t]=sp(e.dataset.cart);sess(sid).result.teams[t].carts=e.value.split(/[,\s]+/).filter(Boolean);renderSheet();});
 }
-const sess=id=>plan.sessions.find(s=>s.id===id);
 function chip(sid,n,pos){
-  const isSel=sel&&sel.sid===sid&&JSON.stringify({...sel,sid:undefined})===JSON.stringify({...pos,sid:undefined});
+  const me=JSON.stringify({sid,...pos});
+  const isSel=sel&&JSON.stringify(sel)===me;
   const cls=['chip',isMover(n)?'m':'',gOf(n)==='F'?'f':'',isSel?'sel':''].join(' ');
-  return `<button class="${cls}" data-chip='${JSON.stringify({sid,...pos})}'>${esc(n)}</button>`;
+  return `<button class="${cls}" data-chip='${me}'>${esc(n)}</button>`;
 }
 function ref(s,pos){return pos.bench?s.result.bench:s.result.teams[pos.t].pairs[pos.p];}
 function onChip(pos){
-  if(!sel){sel=pos;renderBoards();return;}
-  if(sel.sid===pos.sid&&JSON.stringify(sel)===JSON.stringify(pos)){sel=null;renderBoards();return;}
-  if(sel.sid!==pos.sid){sel=pos;renderBoards();return;}
+  if(!sel||sel.sid!==pos.sid){sel=pos;renderBoards();return;}
+  if(JSON.stringify(sel)===JSON.stringify(pos)){sel=null;renderBoards();return;}
   const s=sess(pos.sid); const a=ref(s,sel), b=ref(s,pos);
   const t=a[sel.k]; a[sel.k]=b[pos.k]; b[pos.k]=t;
   sel=null; renderAll();
@@ -469,27 +481,13 @@ function moveTo(sid,pos){
   ref(s,pos).push(n); sel=null; renderAll();
 }
 
-/* ---------- 완성 표 ---------- */
-function toMin(t){const [h,m]=t.split(':').map(Number);return h*60+m;}
-function fmt(m){return Math.floor(m/60)+':'+String(m%60).padStart(2,'0');}
-function dateTitle(){
-  if(!plan.date) return '전시대 봉사';
-  const d=new Date(plan.date+'T00:00');
-  return `${d.getMonth()+1}월${d.getDate()}일 ${DAYS[d.getDay()]}요일 전시대 봉사`;
-}
-function sessTitle(s){return (s.label?s.label+' ':'')+s.start+'–'+s.end;}
+/* ---------- 완성 표 (날짜별로 묶어서) ---------- */
 function cellText(tm,p,pi){
   if(!p||!p.length) return '';
   return p.map((n,k)=>pi===0&&k===0&&tm.carts&&tm.carts.length?`${n}(${tm.carts.join(',')})`:n).join('/');
 }
-function timeLabel(s){
-  const [h1,m1]=s.start.split(':').map(Number), [h2,m2]=s.end.split(':').map(Number);
-  return (m1===0&&m2===0)?`${h1}–${h2}시`:`${h1}:${String(m1).padStart(2,'0')}–${h2}:${String(m2).padStart(2,'0')}`;
-}
-function renderSheet(){
-  const el=$('sheet'); let h=`<div class="ttl">${esc(dateTitle())}</div>`;
-  const ss=plan.sessions.filter(s=>s.result);
-  // 모든 시간대에서 쓰인 장소를 설정 순서대로 모아 열로 사용
+function dayHTML(date,ss){
+  let h=`<div class="ttl">${esc(md(date)+' '+DAYS[dowOf(date)]+'요일 전시대 봉사')}</div>`;
   const order=S.locations.map(l=>l.name);
   const used=[...new Set(ss.flatMap(s=>s.result.teams.map(t=>t.loc)))].sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
   for(let g=0;g<used.length;g+=3){
@@ -507,43 +505,73 @@ function renderSheet(){
     });
     h+='</table>';
   }
-  el.innerHTML=h;
+  return h;
 }
-function renderAll(){ plan.sessions.forEach(s=>renderMsg(s)); renderBoards(); renderSheet(); }
+function renderSheet(){
+  const ss=sortSess(P().sessions).filter(s=>s.result);
+  const dates=[...new Set(ss.map(s=>s.date))];
+  $('sheet').innerHTML=dates.map(d=>`<div class="day" data-date="${d}">${dayHTML(d,ss.filter(s=>s.date===d))}</div>`).join('');
+}
+function renderAll(){ P().sessions.forEach(s=>renderMsg(s)); renderBoards(); renderSheet(); }
 
-/* ---------- 계획표 이벤트 ---------- */
-function setDate(d,sample){
-  plan.date=d; $('date').value=d;
-  $('daykind').textContent=isWeekend(d)?'주말 · 1부/2부 신청자 따로':'주중';
-  resetSessions(sample); renderSessions(); renderAll();
-}
-$('date').onchange=e=>{ if(e.target.value) setDate(e.target.value,false); };
-$('addSess').onclick=()=>{const t=S.times;plan.sessions.push(newSess('추가',t.wd[0],t.wd[1],t.wdRot,''));renderSessions();};
+/* ---------- 이벤트 ---------- */
+$('week').onchange=e=>{ if(!e.target.value) return; setupWeek(mode,mondayOf(e.target.value),false); sel=null; renderSessions(); renderAll(); };
+$('addSess').onclick=()=>{const p=P();const sc=S.schedule[mode][0]||{dow:mode==='we'?6:3,start:'09:00',end:'11:00',rot:2};p.sessions.push(newSess(p.monday,sc,''));renderSessions();};
 $('genAll').onclick=()=>{
-  plan.sessions.forEach(s=>generate(s)); sel=null; renderSessions(); renderAll();
-  if(plan.sessions.some(s=>s.result)) $('editPanel').scrollIntoView({behavior:'smooth',block:'start'});
+  const extra=[];
+  sortSess(P().sessions).forEach(s=>{ generate(s,extra); if(s.result) extra.push(recOf(s)); });
+  sel=null; renderSessions(); renderAll();
+  if(P().sessions.some(s=>s.result)) $('editPanel').scrollIntoView({behavior:'smooth',block:'start'});
 };
 $('saveHist').onclick=()=>{
-  plan.sessions.forEach(s=>{
+  P().sessions.forEach(s=>{
     if(!s.result) return;
-    const id=plan.date+' '+sessTitle(s);
+    const id=s.date+' '+s.start;
     S.history=S.history.filter(h=>h.id!==id);
-    S.history.push({id,date:plan.date,groups:s.result.teams.flatMap(t=>t.pairs.filter(p=>p.length>1)),teams:s.result.teams.map(t=>t.pairs.flat())});
+    S.history.push({id,date:s.date,label:sessTitle(s),...recOf(s)});
   });
-  save(); renderHist(); toast('편성 기록을 저장했습니다');
+  save(); toast('편성 기록을 저장했습니다');
 };
 $('toImg').onclick=async()=>{
   if(typeof html2canvas!=='function'){toast('이미지 기능을 불러오지 못했습니다. 인터넷 연결을 확인하세요');return;}
-  const c=await html2canvas($('sheet'),{scale:2,backgroundColor:'#ffffff'});
-  $('imgOut').src=c.toDataURL('image/png'); $('imgModal').hidden=false;
+  const out=$('imgOut'); out.innerHTML='<span class="legend">이미지를 만드는 중…</span>'; $('imgModal').hidden=false;
+  const days=[...document.querySelectorAll('#sheet .day')];
+  out.innerHTML='';
+  for(const d of days){
+    const c=await html2canvas(d,{scale:2,backgroundColor:'#ffffff'});
+    const img=document.createElement('img'); img.src=c.toDataURL('image/png'); img.alt=d.dataset.date+' 계획표';
+    out.appendChild(img);
+  }
 };
 $('imgClose').onclick=()=>$('imgModal').hidden=true;
-$('tab-plan').onclick=()=>tab('plan'); $('tab-set').onclick=()=>tab('set');
-function tab(t){$('view-plan').hidden=t!=='plan';$('view-set').hidden=t!=='set';$('tab-plan').setAttribute('aria-selected',t==='plan');$('tab-set').setAttribute('aria-selected',t==='set');if(t==='set')renderSettings();else{renderSessions();renderAll();}}
+['wd','we','set'].forEach(t=>$('tab-'+t).onclick=()=>tab(t));
+function tab(t){
+  ['wd','we','set'].forEach(x=>$('tab-'+x).setAttribute('aria-selected',x===t));
+  $('view-set').hidden=t!=='set'; $('view-plan').hidden=t==='set';
+  if(t==='set'){renderSettings();return;}
+  mode=t; sel=null; renderSessions(); renderAll();
+}
 
 /* ---------- 기본 설정 ---------- */
+function renderSched(){
+  ['wd','we'].forEach(m=>{
+    const box=$(m==='wd'?'schWd':'schWe'); box.innerHTML='';
+    S.schedule[m].forEach((sc,i)=>{
+      const d=document.createElement('div'); d.className='it';
+      d.innerHTML=`<label class="f">요일<select data-k="dow">${[1,2,3,4,5,6,0].map(w=>`<option value="${w}"${w==sc.dow?' selected':''}>${DAYS[w]}요일</option>`).join('')}</select></label>
+        <label class="f">시작<input type="time" data-k="start" value="${sc.start}"></label>
+        <label class="f">끝<input type="time" data-k="end" value="${sc.end}"></label>
+        <label class="f">교대<select data-k="rot"><option value="2"${sc.rot==2?' selected':''}>2교대</option><option value="3"${sc.rot==3?' selected':''}>3교대</option></select></label>
+        <button class="b warn sm">삭제</button>`;
+      d.querySelectorAll('[data-k]').forEach(e=>e.onchange=()=>{const k=e.dataset.k;sc[k]=(k==='dow'||k==='rot')?+e.value:e.value;save();});
+      d.querySelector('button').onclick=()=>{S.schedule[m].splice(i,1);save();renderSched();};
+      box.appendChild(d);
+    });
+  });
+}
+document.querySelectorAll('[data-addsch]').forEach(b=>b.onclick=()=>{const m=b.dataset.addsch;S.schedule[m].push(m==='wd'?{dow:3,start:'18:00',end:'20:00',rot:2}:{dow:6,start:'08:00',end:'10:00',rot:3});save();renderSched();});
 function renderSettings(){
-  // 이동 형제
+  renderSched();
   const ml=$('moverList'); ml.innerHTML='';
   S.movers.forEach((n,i)=>{
     const w=spouseOf(n);
@@ -556,7 +584,6 @@ function renderSettings(){
   ml.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const i=+b.dataset.d;if(i<S.movers.length-1){[S.movers[i+1],S.movers[i]]=[S.movers[i],S.movers[i+1]];save();renderSettings();}});
   ml.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{S.movers.splice(+b.dataset.x,1);save();renderSettings();});
   $('moverAdd').innerHTML=S.members.filter(m=>m.g==='M'&&!isMover(m.name)).map(m=>`<option>${esc(m.name)}</option>`).join('')||'<option value="">추가할 형제 없음</option>';
-  // 장소
   const ll=$('locList'); ll.innerHTML='';
   S.locations.forEach((l,i)=>{
     const d=document.createElement('div'); d.className='it';
@@ -572,11 +599,6 @@ function renderSettings(){
   ll.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const i=+b.dataset.u,L=S.locations;if(i>0){[L[i-1],L[i]]=[L[i],L[i-1]];save();renderSettings();}});
   ll.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const i=+b.dataset.d,L=S.locations;if(i<L.length-1){[L[i+1],L[i]]=[L[i],L[i+1]];save();renderSettings();}});
   ll.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{S.locations.splice(+b.dataset.x,1);save();renderSettings();});
-  // 시간
-  const t=S.times;
-  $('wkA1').value=t.wkA[0];$('wkA2').value=t.wkA[1];$('wkB1').value=t.wkB[0];$('wkB2').value=t.wkB[1];
-  $('wdS').value=t.wd[0];$('wdE').value=t.wd[1];$('wkRot').value=t.wkRot;$('wdRot').value=t.wdRot;
-  // 명단
   $('memCount').textContent=`형제 ${S.members.filter(m=>m.g==='M').length} · 자매 ${S.members.filter(m=>m.g==='F').length}`;
   const mb=$('memBody'); mb.innerHTML='';
   S.members.forEach((m,i)=>{
@@ -597,16 +619,13 @@ function unlinkSpouse(m){ if(m&&m.spouse){const o=mem(m.spouse);if(o&&o.spouse==
 $('moverAddBtn').onclick=()=>{const v=$('moverAdd').value;if(v&&!isMover(v)){S.movers.push(v);save();renderSettings();}};
 $('locAddBtn').onclick=()=>{const v=$('locNew').value.trim();if(!v)return;S.locations.push({name:v,on:true,allow3:false});$('locNew').value='';save();renderSettings();};
 $('memAddBtn').onclick=()=>{const v=$('memName').value.trim();if(!v)return;if(mem(v)){toast('이미 명단에 있는 이름입니다');return;}S.members.push({name:v,g:$('memG').value,spouse:''});$('memName').value='';save();renderSettings();toast(v+' 추가됨');};
-[['wkA1','wkA',0],['wkA2','wkA',1],['wkB1','wkB',0],['wkB2','wkB',1],['wdS','wd',0],['wdE','wd',1]].forEach(([id,k,i])=>$(id).onchange=e=>{S.times[k][i]=e.target.value;save();});
-$('wkRot').onchange=e=>{S.times.wkRot=+e.target.value;save();};
-$('wdRot').onchange=e=>{S.times.wdRot=+e.target.value;save();};
 
 function renderHist(){
   const el=$('histList'); el.innerHTML='';
   if(!S.history.length){el.innerHTML='<span class="legend">아직 확정한 편성이 없습니다. 계획표에서 "확정"을 누르면 여기에 쌓입니다.</span>';return;}
   S.history.slice().sort((a,b)=>b.id.localeCompare(a.id)).forEach(h=>{
     const d=document.createElement('div'); d.className='it';
-    d.innerHTML=`<span class="n">${esc(h.id)}</span><span class="legend">${h.groups.length}개 조</span><button class="b warn sm">삭제</button>`;
+    d.innerHTML=`<span class="n">${esc(h.label||h.id)}</span><span class="legend">${h.groups.length}개 조</span><button class="b warn sm">삭제</button>`;
     d.querySelector('button').onclick=()=>{S.history=S.history.filter(x=>x.id!==h.id);save();renderHist();};
     el.appendChild(d);
   });
@@ -620,16 +639,19 @@ $('bkLoad').onclick=()=>{
   let d; try{d=JSON.parse($('bkText').value);}catch(e){toast('백업 형식이 아닙니다');return;}
   if(!d||!Array.isArray(d.members)){toast('백업 형식이 아닙니다');return;}
   $('bkConfirm').innerHTML=`<div class="confirmbar">지금 명단·설정·기록을 이 백업으로 바꿀까요? <button class="b warn sm" id="bkYes">바꾸기</button><button class="b ghost sm" id="bkNo">취소</button></div>`;
-  $('bkYes').onclick=()=>{S=Object.assign(defaults(),d);save();$('bkConfirm').innerHTML='';renderSettings();toast('복원했습니다');};
+  $('bkYes').onclick=()=>{S=Object.assign(defaults(),d);if(!d.schedule)S.schedule=defSchedule();save();$('bkConfirm').innerHTML='';renderSettings();toast('복원했습니다');};
   $('bkNo').onclick=()=>$('bkConfirm').innerHTML='';
 };
 
-/* ---------- 시작: 예시 데이터로 한 번 편성 ---------- */
+/* ---------- 시작: 다음 주를 예시로 편성 ---------- */
 (function init(){
-  const d=new Date(); const add=(6-d.getDay()+7)%7||7; d.setDate(d.getDate()+add);
-  const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  setDate(iso,true);
-  plan.sessions.forEach(s=>generate(s)); renderSessions(); renderAll();
+  const d=new Date(); d.setDate(d.getDate()+1);
+  const monday=mondayOf(iso(d));
+  ['wd','we'].forEach(m=>{
+    setupWeek(m,monday,true);
+    const extra=[]; sortSess(plans[m].sessions).forEach(s=>{generate(s,extra);if(s.result)extra.push(recOf(s));});
+  });
+  tab('wd');
 })();
 })();
 </script>
