@@ -285,13 +285,13 @@ const sessTitle=s=>`${md(s.date)} (${DAYS[s.dow]}) ${timeLabel(s)}`;
 const sortSess=arr=>arr.slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
 
 /* ---------- 명단 인식 ---------- */
-const STOP=new Set(['예시','투표','참여','참여자','신청','신청자','명단','참석','불참','선택','항목','주말','주중','오전','오후','형제','자매','시간','전시대','봉사','님','수요일','금요일','토요일']);
+const STOP=new Set(['예시','투표','참여','참여자','신청','신청자','명단','참석','불참','선택','항목','주말','주중','오전','오후','형제','자매','시간','전시대','봉사','님','수요일','금요일','토요일','일요일','월요일','화요일','목요일','삭제','오후','오전','외부','참석자','참가','인원','항목별','추가','클릭']);
 function parseNames(text){
   const found=new Set();
   const names=S.members.map(m=>m.name).sort((a,b)=>b.length-a.length);
   let rest=text;
   for(const n of names){ if(rest.includes(n)){ found.add(n); rest=rest.split(n).join(' '); } }
-  const unknown=[...new Set((rest.match(/[가-힣]{2,4}/g)||[]).map(w=>w.replace(/님$/,'')).filter(w=>w.length>=2&&!STOP.has(w)))];
+  const unknown=[...new Set((rest.match(/[가-힣]+/g)||[]).map(w=>w.replace(/님$/,'')).filter(w=>w.length>=2&&w.length<=4&&!STOP.has(w)))];
   return {names:[...found],unknown};
 }
 
