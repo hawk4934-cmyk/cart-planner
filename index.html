@@ -1,3 +1,7 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>전시대봉사 계획표</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Do+Hyeon&display=swap">
@@ -19,7 +23,10 @@
   --accent:#5fb6d1; --accent-soft:#1d3640; --warn:#f08a6b; --warn-soft:#3a2219; --ok:#6fcf97; --sel:#d9a92c;
   color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+[hidden]{display:none!important}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
 .wrap{max-width:1000px;margin:0 auto;padding-block:16px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
 header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 h1{font-family:var(--f-display);font-weight:400;font-size:30px;margin:0;color:var(--accent);letter-spacing:.5px}
@@ -67,8 +74,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 #sheet table{border-collapse:collapse;width:100%;border:2px solid #16627c}
 #sheet th,#sheet td{border:1px solid #9fb8c2;padding:6px 12px;text-align:center;white-space:nowrap;font-size:15px}
 #sheet th{background:#dcebf1;color:#16627c;font-size:16px;font-weight:800}
-#sheet td.t{color:#3f5a66;font-weight:800;font-variant-numeric:tabular-nums;background:#f3f8fa;width:110px}
-#sheet td.t.cyc{color:#d6261c}
+#sheet td.t{color:#16627c;font-weight:800;font-variant-numeric:tabular-nums;background:#f3f8fa;width:90px}
+#sheet td.t.big{font-family:var(--f-display);font-size:22px;font-weight:400;line-height:1.2;white-space:normal}
+#sheet td:not(.t){min-width:170px}
 #sheet tr.cyc td{border-top:2px solid #16627c}
 #sheet td.empty{background:#fafcfd}
 .tbl{width:100%;border-collapse:collapse;font-size:14px}
@@ -159,7 +167,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <label class="f">주중 시작<input type="time" id="wdS"></label>
         <label class="f">주중 끝<input type="time" id="wdE"></label>
         <label class="f">주중 교대 수<select id="wdRot"><option value="2">2교대</option><option value="3">3교대</option></select></label>
-        <label class="f">한 교대 시간<select id="slotMin"><option value="15">15분</option><option value="20">20분</option></select></label>
       </div>
     </section>
 
@@ -375,7 +382,6 @@ function renderSessions(){
           <label class="f">시작<input type="time" id="st${s.id}" value="${s.start}"></label>
           <label class="f">끝<input type="time" id="en${s.id}" value="${s.end}"></label>
           <label class="f">교대<select id="rt${s.id}"><option value="2"${s.rot==2?' selected':''}>2교대</option><option value="3"${s.rot==3?' selected':''}>3교대</option></select></label>
-          <label class="f">한 교대<select id="sl${s.id}"><option value="15"${s.slot==15?' selected':''}>15분</option><option value="20"${s.slot==20?' selected':''}>20분</option></select></label>
         </div>
         ${plan.sessions.length>1?`<button class="b warn sm" data-del="${s.id}">시간대 삭제</button>`:''}
       </div>
@@ -383,7 +389,7 @@ function renderSessions(){
       <div class="msgs" id="ms${s.id}"></div>`;
     box.appendChild(d);
     const bind=(p,f)=>$(p+s.id).addEventListener('change',e=>{s[f]=e.target.value;if(f==='text'||f==='rot')renderMsg(s,true);else renderAll();});
-    bind('lb','label');bind('st','start');bind('en','end');bind('rt','rot');bind('sl','slot');
+    bind('lb','label');bind('st','start');bind('en','end');bind('rt','rot');
     $('tx'+s.id).addEventListener('input',e=>{s.text=e.target.value;renderMsg(s,true);});
     renderMsg(s);
   });
@@ -476,26 +482,31 @@ function cellText(tm,p,pi){
   if(!p||!p.length) return '';
   return p.map((n,k)=>pi===0&&k===0&&tm.carts&&tm.carts.length?`${n}(${tm.carts.join(',')})`:n).join('/');
 }
+function timeLabel(s){
+  const [h1,m1]=s.start.split(':').map(Number), [h2,m2]=s.end.split(':').map(Number);
+  return (m1===0&&m2===0)?`${h1}–${h2}시`:`${h1}:${String(m1).padStart(2,'0')}–${h2}:${String(m2).padStart(2,'0')}`;
+}
 function renderSheet(){
   const el=$('sheet'); let h=`<div class="ttl">${esc(dateTitle())}</div>`;
   const ss=plan.sessions.filter(s=>s.result);
-  ss.forEach(s=>{
-    if(ss.length>1) h+=`<div class="stl">${esc(sessTitle(s))}</div>`;
-    const start=toMin(s.start), end=toMin(s.end), slot=+s.slot, rot=+s.rot;
-    const times=[]; for(let m=start;m+slot<=end;m+=slot) times.push(m);
-    const teams=s.result.teams;
-    for(let g=0;g<teams.length;g+=3){
-      const grp=teams.slice(g,g+3);
-      h+=`<table style="${ss.length>1||g>0?'margin-top:'+(g>0?'6px':'0'):''}"><tr><th>${g===0?'시간':'구역'}</th>${grp.map(t=>`<th>${esc(t.loc)}</th>`).join('')}${'<th></th>'.repeat(3-grp.length)}</tr>`;
-      times.forEach((m,i)=>{
-        const pi=i%rot, cyc=i>0&&pi===0;
-        h+=`<tr class="${cyc?'cyc':''}"><td class="t${cyc?' cyc':''}">${fmt(m)}–${fmt(m+slot)}</td>`;
-        grp.forEach(t=>{const txt=cellText(t,t.pairs[pi],pi);h+=`<td class="${txt?'':'empty'}">${esc(txt)}</td>`;});
-        h+='<td class="empty"></td>'.repeat(3-grp.length)+'</tr>';
-      });
-      h+='</table>';
-    }
-  });
+  // 모든 시간대에서 쓰인 장소를 설정 순서대로 모아 열로 사용
+  const order=S.locations.map(l=>l.name);
+  const used=[...new Set(ss.flatMap(s=>s.result.teams.map(t=>t.loc)))].sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
+  for(let g=0;g<used.length;g+=3){
+    const cols=used.slice(g,g+3);
+    h+=`<table style="margin-top:${g>0?'8px':'0'}"><tr><th>${g===0?'시간':'구역'}</th>${cols.map(n=>`<th>${esc(n)}</th>`).join('')}</tr>`;
+    ss.forEach(s=>{
+      const teams=cols.map(n=>s.result.teams.find(t=>t.loc===n));
+      const rows=Math.max(+s.rot,...teams.map(t=>t?t.pairs.length:0));
+      for(let r=0;r<rows;r++){
+        h+=`<tr class="${r===0?'cyc':''}">`;
+        if(r===0) h+=`<td class="t big" rowspan="${rows}">${esc(timeLabel(s))}</td>`;
+        teams.forEach(t=>{const txt=t?cellText(t,t.pairs[r],r):'';h+=`<td class="${txt?'':'empty'}">${esc(txt)}</td>`;});
+        h+='</tr>';
+      }
+    });
+    h+='</table>';
+  }
   el.innerHTML=h;
 }
 function renderAll(){ plan.sessions.forEach(s=>renderMsg(s)); renderBoards(); renderSheet(); }
@@ -564,7 +575,7 @@ function renderSettings(){
   // 시간
   const t=S.times;
   $('wkA1').value=t.wkA[0];$('wkA2').value=t.wkA[1];$('wkB1').value=t.wkB[0];$('wkB2').value=t.wkB[1];
-  $('wdS').value=t.wd[0];$('wdE').value=t.wd[1];$('wkRot').value=t.wkRot;$('wdRot').value=t.wdRot;$('slotMin').value=t.slot;
+  $('wdS').value=t.wd[0];$('wdE').value=t.wd[1];$('wkRot').value=t.wkRot;$('wdRot').value=t.wdRot;
   // 명단
   $('memCount').textContent=`형제 ${S.members.filter(m=>m.g==='M').length} · 자매 ${S.members.filter(m=>m.g==='F').length}`;
   const mb=$('memBody'); mb.innerHTML='';
@@ -589,7 +600,6 @@ $('memAddBtn').onclick=()=>{const v=$('memName').value.trim();if(!v)return;if(me
 [['wkA1','wkA',0],['wkA2','wkA',1],['wkB1','wkB',0],['wkB2','wkB',1],['wdS','wd',0],['wdE','wd',1]].forEach(([id,k,i])=>$(id).onchange=e=>{S.times[k][i]=e.target.value;save();});
 $('wkRot').onchange=e=>{S.times.wkRot=+e.target.value;save();};
 $('wdRot').onchange=e=>{S.times.wdRot=+e.target.value;save();};
-$('slotMin').onchange=e=>{S.times.slot=+e.target.value;save();};
 
 function renderHist(){
   const el=$('histList'); el.innerHTML='';
