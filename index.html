@@ -133,7 +133,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
     <section class="panel" id="editPanel" hidden>
       <h2>편성 확인 · 수정</h2>
-      <p class="legend" style="margin:0">이름을 하나 누르고 다른 이름을 누르면 서로 바뀝니다. 이름을 고른 뒤 <b>＋</b>를 누르면 그 자리로 옮겨집니다. 각 팀 첫 줄 맨 앞 사람 옆에 전시대 번호가 붙습니다. <span style="color:var(--accent);font-weight:800">굵은 테두리</span>=이동 형제, <span style="color:var(--warn)">붉은 글씨</span>=자매</p>
+      <p class="legend" style="margin:0">이름을 하나 누르고 다른 이름을 누르면 서로 바뀝니다. 이름을 고른 뒤 <b>＋</b>를 누르면 그 자리로 옮겨집니다. 각 팀 첫 줄 맨 앞 사람 옆에 전시대 번호가 붙습니다. <span style="color:var(--accent);font-weight:800">굵은 테두리</span>=카트 이동자, <span style="color:var(--warn)">붉은 글씨</span>=자매</p>
       <div id="boards" style="display:flex;flex-direction:column;gap:16px"></div>
     </section>
 
@@ -163,10 +163,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     </section>
 
     <section class="panel">
-      <h2>전시대 이동 형제 (순위)</h2>
-      <p class="legend" style="margin:0">위에서부터 먼저 팀에 배정됩니다. 배우자가 같은 시간대에 신청했으면 부부가 첫 짝이 됩니다.</p>
+      <h2>카트 이동자 (순위)</h2>
+      <p class="legend" style="margin:0">신청자 중 위에서부터 순서대로 장소마다 한 명씩 임명됩니다. 형제가 부족할 때를 위해 자매도 아래쪽에 추가해 두세요. 배우자가 같은 시간대에 신청했으면 부부가 첫 짝이 되고, 아니면 같은 성별과 짝이 됩니다.</p>
       <div class="ord" id="moverList"></div>
-      <div class="row"><select id="moverAdd"></select><button class="b sm" id="moverAddBtn">이동 형제로 추가</button></div>
+      <div class="row"><select id="moverAdd"></select><button class="b sm" id="moverAddBtn">이동자로 추가</button></div>
     </section>
 
     <section class="panel">
@@ -271,7 +271,7 @@ let mode='wd';
 const plans={wd:{monday:'',sessions:[]},we:{monday:'',sessions:[]}};
 const P=()=>plans[mode];
 let uid=1;
-function newSess(monday,sc,text){return {id:uid++,dow:sc.dow,date:dateFor(monday,sc.dow),start:sc.start,end:sc.end,rot:sc.rot,text:text||'',result:null,msg:null};}
+function newSess(monday,sc,text){return {id:uid++,dow:sc.dow,date:dateFor(monday,sc.dow),start:sc.start,end:sc.end,rot:sc.rot,nLoc:0,text:text||'',result:null,msg:null};}
 function setupWeek(m,monday,sample){
   plans[m].monday=monday;
   plans[m].sessions=S.schedule[m].map((sc,i)=>newSess(monday,sc,sample?sampleText(i+(m==='we'?2:0)):''));
@@ -323,8 +323,14 @@ function generate(sess,extra){
   const locs=S.locations.filter(l=>l.on);
   const movers=S.movers.filter(n=>names.includes(n));
   if(N===0){ sess.result=null; sess.msg={warns:['신청자 명단에서 등록된 이름을 찾지 못했습니다.'],infos:[],unknown}; return; }
-  let L=Math.min(locs.length,Math.max(1,Math.floor(N/per)));
-  if(movers.length<L){ if(movers.length===0) warns.push('신청자 중 전시대 이동 형제가 없습니다.'); else warns.push(`이동 형제가 ${movers.length}명뿐이라 ${movers.length}개 장소로 편성했습니다.`); L=Math.max(1,Math.min(L,movers.length||1)); }
+  const want=+sess.nLoc||0; let L;
+  if(want){
+    L=Math.min(want,locs.length);
+    if(movers.length<L) warns.push(`카트 이동자가 ${movers.length}명뿐이라 ${L-movers.length}개 장소는 이동자 없이 편성했습니다. 기본 설정에서 카트 이동자(자매 포함)를 추가하거나 직접 바꿔 주세요.`);
+  }else{
+    L=Math.min(locs.length,Math.max(1,Math.floor(N/per)));
+    if(movers.length<L){ if(movers.length===0) warns.push('신청자 중 카트 이동자가 없습니다.'); else warns.push(`카트 이동자가 ${movers.length}명뿐이라 ${movers.length}개 장소로 편성했습니다. "장소 수"를 직접 정하면 더 늘릴 수 있습니다.`); L=Math.max(1,Math.min(L,movers.length||1)); }
+  }
   const H=histScores(extra);
   let best=null;
   for(let t=0;t<500;t++){ const r=trial(names,movers.slice(0,L),L,rot,locs,H); if(!best||r.score<best.score) best=r; }
@@ -333,20 +339,21 @@ function generate(sess,extra){
   infos.push(`신청 ${N}명 · ${L}개 장소 · ${rot}교대`);
   if(N>L*per) infos.push('인원이 남아 일부 조는 3명으로 편성했습니다.');
   if(N<L*per) infos.push('빈 교대가 있습니다. 필요하면 수정하세요.');
+  if(best.bench.length) warns.push(`대기 ${best.bench.length}명 — 장소 수를 늘리면 모두 배정할 수 있습니다.`);
   sess.msg={warns,infos,unknown};
 }
 function trial(names,movers,L,rot,locs,H){
   const pool=new Set(names); const teams=[];
   movers.forEach(m=>pool.delete(m));
   for(let i=0;i<L;i++){
-    const m=movers[i]; const tm={pairs:[]};
+    const m=movers[i]; const tm={pairs:[],mover:m||''};
     if(m){ const w=spouseOf(m); if(w&&pool.has(w)){pool.delete(w);tm.pairs.push([m,w]);} else tm.pairs.push([m]); }
     teams.push(tm);
   }
   const ps=(a,b)=>(H.pair[key(a,b)]||0)*10+Math.random()*0.5;
   teams.forEach(tm=>{
     const p=tm.pairs[0]; if(!p||p.length!==1) return;
-    const cands=[...pool].filter(n=>gOf(n)==='M');
+    const g0=gOf(p[0]); const cands=[...pool].filter(n=>gOf(n)===g0);
     if(!cands.length) return;
     cands.sort((a,b)=>ps(p[0],a)-ps(p[0],b)); p.push(cands[0]); pool.delete(cands[0]);
   });
@@ -406,7 +413,9 @@ function renderSessions(){
         <label class="f">시작<input type="time" id="st${s.id}" value="${s.start}"></label>
         <label class="f">끝<input type="time" id="en${s.id}" value="${s.end}"></label>
         <label class="f">교대<select id="rt${s.id}"><option value="2"${s.rot==2?' selected':''}>2교대</option><option value="3"${s.rot==3?' selected':''}>3교대</option></select></label>
+        <label class="f">장소 수<select id="nl${s.id}"><option value="0">자동</option>${S.locations.filter(l=>l.on).map((l,i)=>`<option value="${i+1}"${s.nLoc==i+1?' selected':''}>${i+1}곳</option>`).join('')}</select></label>
       </div>
+      <div class="legend" id="nlh${s.id}"></div>
       <label class="f">신청자 (밴드 명단 붙여넣기, 또는 캡처 사진)<textarea id="tx${s.id}">${esc(s.text)}</textarea></label>
       <div class="row"><label class="filebtn">캡처 사진으로 인식<input type="file" accept="image/*" multiple id="im${s.id}" hidden></label><div class="ocr" id="oc${s.id}"></div></div>
       <div class="msgs" id="ms${s.id}"></div>`;
@@ -415,6 +424,7 @@ function renderSessions(){
     $('st'+s.id).onchange=e=>{s.start=e.target.value;renderSessions();renderAll();};
     $('en'+s.id).onchange=e=>{s.end=e.target.value;renderSessions();renderAll();};
     $('rt'+s.id).onchange=e=>{s.rot=+e.target.value;renderMsg(s,true);};
+    $('nl'+s.id).onchange=e=>{s.nLoc=+e.target.value;renderMsg(s,true);};
     $('tx'+s.id).addEventListener('input',e=>{s.text=e.target.value;renderMsg(s,true);});
     $('im'+s.id).onchange=e=>{const f=[...e.target.files];e.target.value='';if(f.length)ocrFiles(s,f);};
     $('tx'+s.id).addEventListener('paste',e=>{const imgs=[...(e.clipboardData&&e.clipboardData.items||[])].filter(it=>it.type.startsWith('image/')).map(it=>it.getAsFile()).filter(Boolean);if(imgs.length){e.preventDefault();ocrFiles(s,imgs);}});
@@ -426,7 +436,8 @@ function renderSessions(){
 function renderMsg(s,live){
   const el=$('ms'+s.id); if(!el) return;
   const p=parseNames(s.text);
-  let h=`<div class="i">인식된 신청자 <b>${p.names.length}명</b> (형제 ${p.names.filter(n=>gOf(n)==='M').length} · 자매 ${p.names.filter(n=>gOf(n)==='F').length} · 이동 형제 ${p.names.filter(isMover).length})</div>`;
+  let h=`<div class="i">인식된 신청자 <b>${p.names.length}명</b> (형제 ${p.names.filter(n=>gOf(n)==='M').length} · 자매 ${p.names.filter(n=>gOf(n)==='F').length} · 카트 이동자 ${p.names.filter(isMover).length})</div>`;
+  const nh=$('nlh'+s.id); if(nh){const on=S.locations.filter(l=>l.on); nh.textContent=s.nLoc?`사용할 장소: ${on.slice(0,s.nLoc).map(l=>l.name).join(', ')} (정원 약 ${s.nLoc*s.rot*2}명)`:'자동: 신청 인원과 카트 이동자 수에 맞춰 장소 수를 정합니다';}
   if(p.unknown.length) h+=`<div class="w">명단에 없는 이름 후보: ${p.unknown.map(esc).join(', ')} — 맞는 이름이면 '기본 설정 › 기본 명단'에 추가하세요.</div>`;
   if(s.msg&&!live){ s.msg.warns.forEach(w=>h+=`<div class="w">⚠ ${esc(w)}</div>`); s.msg.infos.forEach(w=>h+=`<div class="i">${esc(w)}</div>`); }
   el.innerHTML=h;
@@ -548,7 +559,9 @@ function moveTo(sid,pos){
 /* ---------- 완성 표 (날짜별로 묶어서) ---------- */
 function cellText(tm,p,pi){
   if(!p||!p.length) return '';
-  return p.map((n,k)=>pi===0&&k===0&&tm.carts&&tm.carts.length?`${n}(${tm.carts.join(',')})`:n).join('/');
+  const all=tm.pairs.flat();
+  const mv=(tm.mover&&all.includes(tm.mover))?tm.mover:(all.find(isMover)||(tm.pairs[0]||[])[0]);
+  return p.map(n=>n===mv&&tm.carts&&tm.carts.length?`${n}(${tm.carts.join(',')})`:n).join('/');
 }
 function dayHTML(date,ss){
   let h=`<div class="ttl">${esc(md(date)+' '+DAYS[dowOf(date)]+'요일 전시대 봉사')}</div>`;
@@ -640,14 +653,15 @@ function renderSettings(){
   S.movers.forEach((n,i)=>{
     const w=spouseOf(n);
     const d=document.createElement('div'); d.className='it';
-    d.innerHTML=`<span class="num">${i+1}</span><span class="n">${esc(n)} <span class="legend">${w?'· 아내 '+esc(w):''}</span></span>
+    d.innerHTML=`<span class="num">${i+1}</span><span class="n">${esc(n)} <span class="legend">${gOf(n)==='F'?'(자매) ':''}${w?'· 배우자 '+esc(w):''}</span></span>
       <button class="b ghost sm" data-u="${i}" aria-label="위로">↑</button><button class="b ghost sm" data-d="${i}" aria-label="아래로">↓</button><button class="b warn sm" data-x="${i}">빼기</button>`;
     ml.appendChild(d);
   });
   ml.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const i=+b.dataset.u;if(i>0){[S.movers[i-1],S.movers[i]]=[S.movers[i],S.movers[i-1]];save();renderSettings();}});
   ml.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const i=+b.dataset.d;if(i<S.movers.length-1){[S.movers[i+1],S.movers[i]]=[S.movers[i],S.movers[i+1]];save();renderSettings();}});
   ml.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{S.movers.splice(+b.dataset.x,1);save();renderSettings();});
-  $('moverAdd').innerHTML=S.members.filter(m=>m.g==='M'&&!isMover(m.name)).map(m=>`<option>${esc(m.name)}</option>`).join('')||'<option value="">추가할 형제 없음</option>';
+  const cand=S.members.filter(m=>!isMover(m.name)).sort((a,b)=>(a.g===b.g?0:a.g==='M'?-1:1));
+  $('moverAdd').innerHTML=cand.map(m=>`<option value="${esc(m.name)}">${esc(m.name)} (${m.g==='M'?'형제':'자매'})</option>`).join('')||'<option value="">추가할 사람 없음</option>';
   const ll=$('locList'); ll.innerHTML='';
   S.locations.forEach((l,i)=>{
     const d=document.createElement('div'); d.className='it';
@@ -668,13 +682,13 @@ function renderSettings(){
   S.members.forEach((m,i)=>{
     const opp=S.members.filter(x=>x.g!==m.g);
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><b>${esc(m.name)}</b>${isMover(m.name)?' <span class="pill">이동</span>':''}</td>
+    tr.innerHTML=`<td><b>${esc(m.name)}</b>${isMover(m.name)?' <span class="pill">카트</span>':''}</td>
       <td><select data-g="${i}"><option value="M"${m.g==='M'?' selected':''}>형제</option><option value="F"${m.g==='F'?' selected':''}>자매</option></select></td>
       <td><select data-sp="${i}"><option value="">—</option>${opp.map(o=>`<option${o.name===m.spouse?' selected':''}>${esc(o.name)}</option>`).join('')}</select></td>
       <td><button class="b warn sm" data-x="${i}">삭제</button></td>`;
     mb.appendChild(tr);
   });
-  mb.querySelectorAll('[data-g]').forEach(e=>e.onchange=()=>{const m=S.members[+e.dataset.g];m.g=e.value;unlinkSpouse(m);if(m.g==='F')S.movers=S.movers.filter(n=>n!==m.name);save();renderSettings();});
+  mb.querySelectorAll('[data-g]').forEach(e=>e.onchange=()=>{const m=S.members[+e.dataset.g];m.g=e.value;unlinkSpouse(m);save();renderSettings();});
   mb.querySelectorAll('[data-sp]').forEach(e=>e.onchange=()=>{const m=S.members[+e.dataset.sp];unlinkSpouse(m);if(e.value){const o=mem(e.value);unlinkSpouse(o);m.spouse=o.name;o.spouse=m.name;}save();renderSettings();});
   mb.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{const m=S.members[+b.dataset.x];unlinkSpouse(m);S.movers=S.movers.filter(n=>n!==m.name);S.members.splice(+b.dataset.x,1);save();renderSettings();});
   renderHist();
