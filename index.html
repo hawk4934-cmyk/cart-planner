@@ -416,7 +416,7 @@ function renderSessions(){
         <label class="f">장소 수<select id="nl${s.id}"><option value="0">자동</option>${S.locations.filter(l=>l.on).map((l,i)=>`<option value="${i+1}"${s.nLoc==i+1?' selected':''}>${i+1}곳</option>`).join('')}</select></label>
       </div>
       <div class="legend" id="nlh${s.id}"></div>
-      <label class="f">신청자 (밴드 명단 붙여넣기, 또는 캡처 사진)<textarea id="tx${s.id}">${esc(s.text)}</textarea></label>
+      <label class="f">신청자 (밴드 명단 붙여넣기, 또는 캡처 사진)<textarea id="tx${s.id}" placeholder="밴드 신청자 명단을 붙여넣거나, 아래 버튼으로 캡처 사진을 넣으세요">${esc(s.text)}</textarea></label>
       <div class="row"><label class="filebtn">캡처 사진으로 인식<input type="file" accept="image/*" multiple id="im${s.id}" hidden></label><div class="ocr" id="oc${s.id}"></div></div>
       <div class="msgs" id="ms${s.id}"></div>`;
     box.appendChild(d);
@@ -725,10 +725,7 @@ $('bkLoad').onclick=()=>{
 (function init(){
   const d=new Date(); d.setDate(d.getDate()+1);
   const monday=mondayOf(iso(d));
-  ['wd','we'].forEach(m=>{
-    setupWeek(m,monday,true);
-    const extra=[]; sortSess(plans[m].sessions).forEach(s=>{generate(s,extra);if(s.result)extra.push(recOf(s));});
-  });
+  ['wd','we'].forEach(m=>setupWeek(m,monday,false));
   tab('wd');
 })();
 })();
