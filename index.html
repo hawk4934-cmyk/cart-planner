@@ -126,8 +126,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       </div>
       <div id="sessions" style="display:flex;flex-direction:column;gap:12px"></div>
       <div class="row">
-        <button class="b" id="genAll">한꺼번에 자동 편성</button>
-        <span class="legend">요일·시간대마다 밴드 투표 참여자 명단을 붙여넣으세요. 같은 주 안에서도 같은 짝이 겹치지 않게 편성합니다.</span>
+        <button class="b" id="genAll">전체 한꺼번에 편성</button>
+        <span class="legend">각 요일은 그 요일 칸에 넣은 신청자만으로 편성됩니다. 신청이 마감된 날부터 "이 날만 편성"을 누르면, 이미 만든 다른 날 편성은 바뀌지 않습니다.</span>
       </div>
     </section>
 
@@ -329,7 +329,7 @@ function generate(sess,extra){
     if(movers.length<L) warns.push(`카트 이동자가 ${movers.length}명뿐이라 ${L-movers.length}개 장소는 이동자 없이 편성했습니다. 기본 설정에서 카트 이동자(자매 포함)를 추가하거나 직접 바꿔 주세요.`);
   }else{
     L=Math.min(locs.length,Math.max(1,Math.floor(N/per)));
-    if(movers.length<L){ if(movers.length===0) warns.push('신청자 중 카트 이동자가 없습니다.'); else warns.push(`카트 이동자가 ${movers.length}명뿐이라 ${movers.length}개 장소로 편성했습니다. "장소 수"를 직접 정하면 더 늘릴 수 있습니다.`); L=Math.max(1,Math.min(L,movers.length||1)); }
+    if(movers.length<L) warns.push(movers.length===0?'신청자 중 카트 이동자가 없습니다. 기본 설정에서 카트 이동자(자매 포함)를 추가하세요.':`카트 이동자가 ${movers.length}명뿐이라 ${L-movers.length}개 장소는 이동자 없이 편성했습니다. 기본 설정에서 카트 이동자(자매 포함)를 추가하거나 직접 바꿔 주세요.`);
   }
   const H=histScores(extra);
   let best=null;
@@ -339,7 +339,9 @@ function generate(sess,extra){
   infos.push(`신청 ${N}명 · ${L}개 장소 · ${rot}교대`);
   if(N>L*per) infos.push('인원이 남아 일부 조는 3명으로 편성했습니다.');
   if(N<L*per) infos.push('빈 교대가 있습니다. 필요하면 수정하세요.');
-  if(best.bench.length) warns.push(`대기 ${best.bench.length}명 — 장소 수를 늘리면 모두 배정할 수 있습니다.`);
+  if(best.teams.some(t=>t.pairs.length>rot)) warns.push('인원이 많아 일부 장소에 교대 줄을 하나 더 만들었습니다. 장소 수를 늘리면 정해진 교대 안에 들어갑니다.');
+  if(best.teams.some(t=>t.pairs.some(p=>p.length===1))) warns.push('혼자 서는 칸이 있습니다. 수정 화면에서 짝을 맞춰 주세요.');
+  if(best.teams.some(t=>t.pairs.some(p=>p.length===3&&new Set(p.map(gOf)).size>1))) infos.push('같은 성별 짝이 모자라 한 조는 형제·자매가 함께 섰습니다.');
   sess.msg={warns,infos,unknown};
 }
 function trial(names,movers,L,rot,locs,H){
@@ -380,12 +382,18 @@ function trial(names,movers,L,rot,locs,H){
       const cand=teams[ti].pairs.filter((p,pi)=>p.length===2&&p.every(x=>gOf(x)===gOf(n))&&!(pi===0&&couple(p[0],p[1])));
       if(cand.length){cand.sort((a,b)=>ps(n,a[0])+ps(n,a[1])-ps(n,b[0])-ps(n,b[1]));cand[0].push(n);done=true;break;}
     }
+    // 혼자 선 같은 성별이 있으면 그 짝으로
+    if(!done){ const t=teams.find(tm=>tm.pairs.some(p=>p.length===1&&gOf(p[0])===gOf(n))); if(t){t.pairs.find(p=>p.length===1&&gOf(p[0])===gOf(n)).push(n);done=true;} }
+    // 빈 교대가 있으면 그 자리에
     if(!done){ const t=teams.find(tm=>tm.pairs.length<rot); if(t){t.pairs.push([n]);done=true;} }
-    if(!done) bench.push(n);
+    // 그래도 안 되면 아무 2인조에 3번째로 (부부 조 포함)
+    if(!done){ const c=teams.flatMap(tm=>tm.pairs).filter(p=>p.length===2).sort((a,b)=>ps(n,a[0])+ps(n,a[1])-ps(n,b[0])-ps(n,b[1])); if(c.length){c[0].push(n);done=true;} }
+    // 마지막: 교대 줄을 하나 더 만들어서
+    if(!done){ const t=teams.slice().sort((a,b)=>a.pairs.length-b.pairs.length)[0]; const p=t.pairs.find(p=>p.length<3&&p.length>0&&p.length!==2); if(p) p.push(n); else t.pairs.push([n]); done=true; }
   });
   let score=0;
   teams.forEach(tm=>{
-    tm.pairs.forEach(g=>{for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){if(!couple(g[i],g[j])) score+=(H.pair[key(g[i],g[j])]||0)*10;} if(g.length===3) score+=1;});
+    tm.pairs.forEach(g=>{for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){if(!couple(g[i],g[j])) score+=(H.pair[key(g[i],g[j])]||0)*10;} if(g.length===3) score+=1; if(g.length===3&&new Set(g.map(gOf)).size>1) score+=8; if(g.length===1) score+=15;}); if(tm.pairs.length>rot) score+=20*(tm.pairs.length-rot);
     const all=tm.pairs.flat();
     for(let i=0;i<all.length;i++)for(let j=i+1;j<all.length;j++) score+=(H.team[key(all[i],all[j])]||0);
   });
@@ -406,7 +414,7 @@ function renderSessions(){
     d.innerHTML=`
       <div class="sess-head">
         <span class="dtag">${esc(sessTitle(s))}</span>
-        <button class="b warn sm" data-del="${s.id}">시간대 삭제</button>
+        <div class="row" style="gap:6px"><button class="b sm" data-day="${s.date}">이 날만 편성</button><button class="b warn sm" data-del="${s.id}">시간대 삭제</button></div>
       </div>
       <div class="row">
         <label class="f">요일<select id="dw${s.id}">${[1,2,3,4,5,6,0].map(w=>`<option value="${w}"${w==s.dow?' selected':''}>${DAYS[w]}요일</option>`).join('')}</select></label>
@@ -431,6 +439,7 @@ function renderSessions(){
     if(s.ocrSug) showSug(s);
     renderMsg(s);
   });
+  box.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>genDay(b.dataset.day));
   box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{p.sessions=p.sessions.filter(x=>x.id!=b.dataset.del);renderSessions();renderAll();});
 }
 function renderMsg(s,live){
@@ -445,10 +454,12 @@ function renderMsg(s,live){
 
 /* ---------- 캡처 사진 글자 인식 ---------- */
 let ocrWorker=null;
-async function getWorker(){ if(!ocrWorker){ ocrWorker=await Tesseract.createWorker('kor'); await ocrWorker.setParameters({tessedit_pageseg_mode:'6'}); } return ocrWorker; }
+async function getWorker(){ if(!ocrWorker){ ocrWorker=await Tesseract.createWorker('kor'); } return ocrWorker; }
 function loadImg(f){return new Promise((ok,no)=>{const u=URL.createObjectURL(f);const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src=u;});}
-function prep(im){
-  const sc=Math.min(2.5,Math.max(1,1800/im.width));
+// 같은 사진을 크기·읽기방식을 바꿔 세 번 읽고 결과를 합칩니다 (목록 화면·신청서 화면 모두 시험에서 전원 인식)
+const PASSES=[{w:460,psm:'11'},{w:550,psm:'11'},{w:800,psm:'6'}];
+function prep(im,tw){
+  const sc=tw/im.width;
   const c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
   const x=c.getContext('2d');x.drawImage(im,0,0,c.width,c.height);
   const d=x.getImageData(0,0,c.width,c.height),a=d.data;
@@ -463,20 +474,23 @@ async function ocrFiles(s,files){
   try{
     const w=await getWorker();
     for(let i=0;i<files.length;i++){
-      if(files.length>1) st.textContent=`사진 읽는 중… (${i+1}/${files.length})`;
       const im=await loadImg(files[i]);
-      const r=await w.recognize(prep(im));
-      text+=r.data.text+'\n';
+      for(let k=0;k<PASSES.length;k++){
+        st.textContent=`사진 읽는 중… ${files.length>1?`(${i+1}/${files.length}장) `:''}${k+1}/${PASSES.length}`;
+        await w.setParameters({tessedit_pageseg_mode:PASSES[k].psm});
+        const r=await w.recognize(prep(im,PASSES[k].w));
+        text+=r.data.text+'\n';
+      }
     }
   }catch(e){ ocrWorker=null; st.innerHTML='<span style="color:var(--warn)">사진을 읽지 못했습니다. 인터넷 연결을 확인하고 다시 시도하세요. (Claude 안에서 연 경우에는 작동하지 않고, GitHub에 올린 앱에서 작동합니다)</span>'; return; }
   const flat=text.replace(/\s+/g,'');
-  const hang=(flat.match(/[가-힣]+/g)||[]).join('');
+  const words=[...new Set(text.match(/[가-힣]+/g)||[])].filter(w=>!STOP.has(w)&&!mem(w));
   const found=S.members.map(m=>m.name).filter(n=>flat.includes(n));
   const sug=[];
   S.members.forEach(m=>{
     const n=m.name; if(found.includes(n)) return;
-    for(let i=0;i+n.length<=hang.length;i++){
-      const ch=hang.substr(i,n.length); if(found.includes(ch)||mem(ch)) continue;
+    for(const ch of words){
+      if(ch.length!==n.length) continue;
       let diff=0; for(let k=0;k<n.length;k++) if(ch[k]!==n[k]) diff++;
       if(diff===1){ sug.push({name:n,seen:ch}); break; }
     }
@@ -594,6 +608,14 @@ function renderAll(){ P().sessions.forEach(s=>renderMsg(s)); renderBoards(); ren
 /* ---------- 이벤트 ---------- */
 $('week').onchange=e=>{ if(!e.target.value) return; setupWeek(mode,mondayOf(e.target.value),false); sel=null; renderSessions(); renderAll(); };
 $('addSess').onclick=()=>{const p=P();const sc=S.schedule[mode][0]||{dow:mode==='we'?6:3,start:'09:00',end:'11:00',rot:2};p.sessions.push(newSess(p.monday,sc,''));renderSessions();};
+// 한 날짜만 편성: 다른 날의 편성은 그대로 두고, 그 날의 기존 편성은 짝 겹침 피하기에만 참고
+function genDay(date){
+  const ss=sortSess(P().sessions);
+  const extra=ss.filter(s=>s.date!==date&&s.result).map(recOf);
+  ss.filter(s=>s.date===date).forEach(s=>{ generate(s,extra); if(s.result) extra.push(recOf(s)); });
+  sel=null; renderSessions(); renderAll();
+  const t=ss.find(s=>s.date===date&&s.result); if(t) $('editPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
 $('genAll').onclick=()=>{
   const extra=[];
   sortSess(P().sessions).forEach(s=>{ generate(s,extra); if(s.result) extra.push(recOf(s)); });
