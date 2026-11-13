@@ -67,6 +67,21 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .bench{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .legend{font-size:12px;color:var(--muted)}
 .sheet-scroll{overflow-x:auto;border-radius:6px}
+.areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.area{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;background:var(--bg);min-width:0}
+.area .ln{display:flex;gap:6px;align-items:center}
+.area .ln span{font-size:12px;color:var(--muted);width:62px;flex:none}
+.area input{width:100%}
+/* 호별구역 안내 이미지: 고정 색 */
+#doorSheet{background:#ffffff;color:#111;width:900px;border:2px solid #111;font-family:var(--f-body)}
+#doorSheet .dt{background:#c4ef1c;text-align:center;font-weight:800;font-size:30px;padding:18px 10px}
+#doorSheet .dg{display:grid;grid-template-columns:1fr 1fr}
+#doorSheet .dc{padding:22px 12px;text-align:center;border-top:2px solid #111;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:215px}
+#doorSheet .dc:nth-child(odd){border-right:2px solid #111}
+#doorSheet .dc.span{grid-column:1 / -1;border-right:0}
+#doorSheet .dh{font-weight:800;font-size:22px;margin-bottom:10px}
+#doorSheet .dl{font-weight:700;font-size:18px}
+#doorSheet .dn{background:#fbf3df;font-weight:700;font-size:18px;white-space:pre-line;line-height:1.7}
 /* 완성 표: 밴드 게시용 이미지와 같은 모양이라 테마와 무관하게 고정 색 */
 #sheet{background:#ffffff;color:#1b2b33;padding:10px;width:max-content;min-width:100%;font-family:var(--f-body)}
 #sheet .ttl{background:#16627c;color:#fff;text-align:center;font-family:var(--f-display);font-size:28px;padding:8px 20px;letter-spacing:1px}
@@ -137,16 +152,25 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <div id="boards" style="display:flex;flex-direction:column;gap:16px"></div>
     </section>
 
+    <section class="panel" id="doorPanel" hidden>
+      <h2>호별봉사 병행구역 안내</h2>
+      <p class="legend" style="margin:0">전시대 장소별로 구역번호와 각 팀이 맡을 호별 구역을 적으세요. 입력한 내용은 이 주에 저장되고, 팀 이름은 다음 주에도 그대로 남습니다.</p>
+      <label class="f">안내 제목<input id="doorTitle"></label>
+      <div class="areas" id="doorAreas"></div>
+      <label class="f">별도 안내문<textarea id="doorNotice"></textarea></label>
+    </section>
+
     <section class="panel" id="sheetPanel" hidden>
       <div class="row" style="justify-content:space-between">
         <h2>완성 계획표</h2>
         <div class="row">
-          <button class="b ghost" id="saveHist">확정 (기록 저장)</button>
+          <button class="b ghost" id="saveHist">확정 + 이미지</button>
           <button class="b" id="toImg">이미지 만들기</button>
         </div>
       </div>
       <p class="legend" style="margin:0">확정하면 이번 편성이 기록되어, 다음 편성에서 같은 짝·같은 팀이 되지 않도록 반영됩니다. 주중을 먼저 확정한 뒤 주말을 편성하면 주중 짝도 피해서 편성됩니다.</p>
       <div class="sheet-scroll"><div id="sheet"></div></div>
+      <div class="sheet-scroll" id="doorWrap" hidden><div id="doorSheet"></div></div>
     </section>
   </main>
 
@@ -603,7 +627,71 @@ function renderSheet(){
   const dates=[...new Set(ss.map(s=>s.date))];
   $('sheet').innerHTML=dates.map(d=>`<div class="day" data-date="${d}">${dayHTML(d,ss.filter(s=>s.date===d))}</div>`).join('');
 }
-function renderAll(){ P().sessions.forEach(s=>renderMsg(s)); renderBoards(); renderSheet(); }
+/* ---------- 주말 호별구역 안내 ---------- */
+const DEF_NOTICE='방문금지 되어있는 집들 잘 확인 부탁드립니다.\n\n봉사 다 마치신 후 각 구역카드\n\'완료\'버튼도 꼭 눌러주시면 감사하겠습니다^^';
+const ORD=['첫번째팀','두번째팀','세번째팀','네번째팀','다섯번째팀'];
+function doorData(){
+  S.door=S.door||{}; const m=P().monday;
+  if(!S.door[m]) S.door[m]={title:'',notice:S.doorNotice!=null?S.doorNotice:DEF_NOTICE,areas:{}};
+  return S.door[m];
+}
+function doorLocs(){
+  const ss=P().sessions.filter(s=>s.result);
+  const order=S.locations.map(l=>l.name);
+  let used=[...new Set(ss.flatMap(s=>s.result.teams.map(t=>t.loc)))];
+  if(!used.length) used=S.locations.filter(l=>l.on).map(l=>l.name);
+  return used.sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
+}
+function doorLabel(loc,i){
+  S.doorLabels=S.doorLabels||{};
+  if(S.doorLabels[loc]) return S.doorLabels[loc];
+  const m=loc.match(/\(([^)]+)\)/);
+  return String.fromCharCode(65+i)+'팀('+(m?m[1]:loc)+')';
+}
+function doorRows(){ const ss=P().sessions.filter(s=>s.result); return Math.max(3,...ss.map(s=>+s.rot)); }
+function defaultTitle(){
+  const ss=sortSess(P().sessions); const s=ss[0]; if(!s) return '호별봉사 병행구역 배분';
+  return `${DAYS[s.dow]}요일 ${(+s.start.split(':')[0])<12?'오전':'오후'} 호별봉사 병행구역 배분`;
+}
+function areaOf(D,loc){ D.areas[loc]=D.areas[loc]||{no:'',lines:[]}; return D.areas[loc]; }
+function renderDoor(){
+  const show=mode==='we'; $('doorPanel').hidden=!show; $('doorWrap').hidden=!show;
+  if(!show) return;
+  const D=doorData(), locs=doorLocs(), R=doorRows();
+  $('doorTitle').value=D.title||defaultTitle(); $('doorTitle').placeholder=defaultTitle();
+  $('doorNotice').value=D.notice;
+  const box=$('doorAreas'); box.innerHTML='';
+  locs.forEach((loc,i)=>{
+    const A=areaOf(D,loc);
+    const c=document.createElement('div'); c.className='area';
+    let h=`<div class="legend">${esc(loc)}</div>
+      <div class="ln"><span>팀 이름</span><input data-lab="${esc(loc)}" value="${esc(doorLabel(loc,i))}"></div>
+      <div class="ln"><span>구역번호</span><input data-no="${esc(loc)}" value="${esc(A.no)}" placeholder="예: 325번 半"></div>`;
+    for(let r=0;r<R;r++) h+=`<div class="ln"><span>${ORD[r]||(r+1)+'번째팀'}</span><input data-ln="${esc(loc)}|${r}" value="${esc(A.lines[r]||'')}" placeholder="예: 101동 15층만"></div>`;
+    c.innerHTML=h; box.appendChild(c);
+  });
+  box.querySelectorAll('[data-lab]').forEach(e=>e.oninput=()=>{S.doorLabels=S.doorLabels||{};S.doorLabels[e.dataset.lab]=e.value;save();renderDoorSheet();});
+  box.querySelectorAll('[data-no]').forEach(e=>e.oninput=()=>{areaOf(D,e.dataset.no).no=e.value;save();renderDoorSheet();});
+  box.querySelectorAll('[data-ln]').forEach(e=>e.oninput=()=>{const [loc,r]=e.dataset.ln.split('|');areaOf(D,loc).lines[+r]=e.value;save();renderDoorSheet();});
+  renderDoorSheet();
+}
+$('doorTitle').oninput=e=>{doorData().title=e.target.value;save();renderDoorSheet();};
+$('doorNotice').oninput=e=>{const D=doorData();D.notice=e.target.value;S.doorNotice=e.target.value;save();renderDoorSheet();};
+function renderDoorSheet(){
+  if(mode!=='we') return;
+  const D=doorData(), locs=doorLocs(), R=doorRows();
+  const cells=locs.map((loc,i)=>{
+    const A=areaOf(D,loc); const no=(A.no||'').trim();
+    let h=`<div class="dh">${esc(doorLabel(loc,i))} 구역번호: ${esc(no?(/번|半|반/.test(no)?no:no+'번'):'번')}</div>`;
+    for(let r=0;r<R;r++) h+=`<div class="dl">${ORD[r]||(r+1)+'번째팀'}: ${esc(A.lines[r]||'')}</div>`;
+    return `<div class="dc">${h}</div>`;
+  });
+  const notice=(D.notice||'').trim();
+  if(notice) cells.push(`<div class="dc dn${locs.length%2===0?' span':''}">${esc(notice)}</div>`);
+  const html=cells.join('');
+  $('doorSheet').innerHTML=`<div class="dt">${esc(D.title||defaultTitle())}</div><div class="dg">${html}</div>`;
+}
+function renderAll(){ P().sessions.forEach(s=>renderMsg(s)); renderBoards(); renderSheet(); renderDoor(); }
 
 /* ---------- 이벤트 ---------- */
 $('week').onchange=e=>{ if(!e.target.value) return; setupWeek(mode,mondayOf(e.target.value),false); sel=null; renderSessions(); renderAll(); };
@@ -630,8 +718,9 @@ $('saveHist').onclick=()=>{
     S.history.push({id,date:s.date,label:sessTitle(s),...recOf(s)});
   });
   save(); toast('편성 기록을 저장했습니다');
+  makeImages();
 };
-$('toImg').onclick=async()=>{
+async function makeImages(){
   if(typeof html2canvas!=='function'){toast('이미지 기능을 불러오지 못했습니다. 인터넷 연결을 확인하세요');return;}
   const out=$('imgOut'); out.innerHTML='<span class="legend">이미지를 만드는 중…</span>'; $('imgModal').hidden=false;
   const days=[...document.querySelectorAll('#sheet .day')];
@@ -641,7 +730,13 @@ $('toImg').onclick=async()=>{
     const img=document.createElement('img'); img.src=c.toDataURL('image/png'); img.alt=d.dataset.date+' 계획표';
     out.appendChild(img);
   }
-};
+  if(mode==='we'&&!$('doorWrap').hidden){
+    const c=await html2canvas($('doorSheet'),{scale:2,backgroundColor:'#ffffff'});
+    const img=document.createElement('img'); img.src=c.toDataURL('image/png'); img.alt='호별봉사 병행구역 안내';
+    out.appendChild(img);
+  }
+}
+$('toImg').onclick=makeImages;
 $('imgClose').onclick=()=>$('imgModal').hidden=true;
 ['wd','we','set'].forEach(t=>$('tab-'+t).onclick=()=>tab(t));
 function tab(t){
