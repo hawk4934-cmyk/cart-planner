@@ -67,33 +67,36 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .bench{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .legend{font-size:12px;color:var(--muted)}
 .sheet-scroll{overflow-x:auto;border-radius:6px}
+.arc{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.arc-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.arc-head h3{font-family:var(--f-display);font-weight:400;font-size:19px;margin:0}
 .areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
 .area{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;background:var(--bg);min-width:0}
 .area .ln{display:flex;gap:6px;align-items:center}
 .area .ln span{font-size:12px;color:var(--muted);width:62px;flex:none}
 .area input{width:100%}
 /* 호별구역 안내 이미지: 고정 색 */
-#doorSheet{background:#ffffff;color:#111;width:900px;border:2px solid #111;font-family:var(--f-body)}
-#doorSheet .dt{background:#c4ef1c;text-align:center;font-weight:800;font-size:30px;padding:18px 10px}
-#doorSheet .dg{display:grid;grid-template-columns:1fr 1fr}
-#doorSheet .dc{padding:22px 12px;text-align:center;border-top:2px solid #111;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:215px}
-#doorSheet .dc:nth-child(odd){border-right:2px solid #111}
-#doorSheet .dc.span{grid-column:1 / -1;border-right:0}
-#doorSheet .dh{font-weight:800;font-size:22px;margin-bottom:10px}
-#doorSheet .dl{font-weight:700;font-size:18px}
-#doorSheet .dn{background:#fbf3df;font-weight:700;font-size:18px;white-space:pre-line;line-height:1.7}
+.doorbox{background:#ffffff;color:#111;width:900px;border:2px solid #111;font-family:var(--f-body)}
+.doorbox .dt{background:#c4ef1c;text-align:center;font-weight:800;font-size:30px;padding:18px 10px}
+.doorbox .dg{display:grid;grid-template-columns:1fr 1fr}
+.doorbox .dc{padding:22px 12px;text-align:center;border-top:2px solid #111;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:215px}
+.doorbox .dc:nth-child(odd){border-right:2px solid #111}
+.doorbox .dc.span{grid-column:1 / -1;border-right:0}
+.doorbox .dh{font-weight:800;font-size:22px;margin-bottom:10px}
+.doorbox .dl{font-weight:700;font-size:18px}
+.doorbox .dn{background:#fbf3df;font-weight:700;font-size:18px;white-space:pre-line;line-height:1.7}
 /* 완성 표: 밴드 게시용 이미지와 같은 모양이라 테마와 무관하게 고정 색 */
-#sheet{background:#ffffff;color:#1b2b33;padding:10px;width:max-content;min-width:100%;font-family:var(--f-body)}
-#sheet .ttl{background:#16627c;color:#fff;text-align:center;font-family:var(--f-display);font-size:28px;padding:8px 20px;letter-spacing:1px}
-#sheet .stl{background:#e4eff3;color:#16627c;font-weight:800;text-align:center;padding:6px;margin-top:8px;border:2px solid #16627c;border-bottom:0}
-#sheet table{border-collapse:collapse;width:100%;border:2px solid #16627c}
-#sheet th,#sheet td{border:1px solid #9fb8c2;padding:6px 12px;text-align:center;white-space:nowrap;font-size:15px}
-#sheet th{background:#dcebf1;color:#16627c;font-size:16px;font-weight:800}
-#sheet td.t{color:#16627c;font-weight:800;font-variant-numeric:tabular-nums;background:#f3f8fa;width:90px}
-#sheet td.t.big{font-family:var(--f-display);font-size:22px;font-weight:400;line-height:1.2;white-space:normal}
-#sheet td:not(.t){min-width:170px}
-#sheet tr.cyc td{border-top:2px solid #16627c}
-#sheet td.empty{background:#fafcfd}
+.sheetbox{background:#ffffff;color:#1b2b33;padding:10px;width:max-content;min-width:100%;font-family:var(--f-body)}
+.sheetbox .ttl{background:#16627c;color:#fff;text-align:center;font-family:var(--f-display);font-size:28px;padding:8px 20px;letter-spacing:1px}
+.sheetbox .stl{background:#e4eff3;color:#16627c;font-weight:800;text-align:center;padding:6px;margin-top:8px;border:2px solid #16627c;border-bottom:0}
+.sheetbox table{border-collapse:collapse;width:100%;border:2px solid #16627c}
+.sheetbox th,.sheetbox td{border:1px solid #9fb8c2;padding:6px 12px;text-align:center;white-space:nowrap;font-size:15px}
+.sheetbox th{background:#dcebf1;color:#16627c;font-size:16px;font-weight:800}
+.sheetbox td.t{color:#16627c;font-weight:800;font-variant-numeric:tabular-nums;background:#f3f8fa;width:90px}
+.sheetbox td.t.big{font-family:var(--f-display);font-size:22px;font-weight:400;line-height:1.2;white-space:normal}
+.sheetbox td:not(.t){min-width:170px}
+.sheetbox tr.cyc td{border-top:2px solid #16627c}
+.sheetbox td.empty{background:#fafcfd}
 .tbl{width:100%;border-collapse:collapse;font-size:14px}
 .tbl td,.tbl th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left}
 .tbl-scroll{overflow-x:auto;max-height:420px;overflow-y:auto}
@@ -128,6 +131,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-wd" aria-selected="true">주중</button>
       <button role="tab" id="tab-we" aria-selected="false">주말</button>
+      <button role="tab" id="tab-arc" aria-selected="false">보관함</button>
       <button role="tab" id="tab-set" aria-selected="false">기본 설정</button>
     </div>
   </header>
@@ -169,8 +173,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         </div>
       </div>
       <p class="legend" style="margin:0">확정하면 이번 편성이 기록되어, 다음 편성에서 같은 짝·같은 팀이 되지 않도록 반영됩니다. 주중을 먼저 확정한 뒤 주말을 편성하면 주중 짝도 피해서 편성됩니다.</p>
-      <div class="sheet-scroll"><div id="sheet"></div></div>
-      <div class="sheet-scroll" id="doorWrap" hidden><div id="doorSheet"></div></div>
+      <div class="sheet-scroll"><div id="sheet" class="sheetbox"></div></div>
+      <div class="sheet-scroll" id="doorWrap" hidden><div id="doorSheet" class="doorbox"></div></div>
+    </section>
+  </main>
+
+  <main id="view-arc" hidden style="display:flex;flex-direction:column;gap:16px">
+    <section class="panel">
+      <h2>보관함</h2>
+      <p class="legend" style="margin:0">"확정"한 계획표가 이번 주와 지난주 것까지 보관됩니다. 그보다 오래된 것은 자동으로 지워집니다. 봉사 당일까지는 "불러와서 수정"으로 다시 고칠 수 있고, 다시 확정하면 새 내용으로 바뀝니다.</p>
+      <div id="arcList" style="display:flex;flex-direction:column;gap:12px"></div>
     </section>
   </main>
 
@@ -717,9 +729,65 @@ $('saveHist').onclick=()=>{
     S.history=S.history.filter(h=>h.id!==id);
     S.history.push({id,date:s.date,label:sessTitle(s),...recOf(s)});
   });
-  save(); toast('편성 기록을 저장했습니다');
+  // 완성 표 보관 (날짜별)
+  S.archive=S.archive||[];
+  const now=new Date().toISOString();
+  document.querySelectorAll('#sheet .day').forEach(d=>{
+    const key=mode+'|'+d.dataset.date;
+    S.archive=S.archive.filter(a=>a.key!==key);
+    const sess=P().sessions.filter(x=>x.date===d.dataset.date&&x.result).map(x=>JSON.parse(JSON.stringify({dow:x.dow,date:x.date,start:x.start,end:x.end,rot:x.rot,nLoc:x.nLoc,text:x.text,result:x.result})));
+    S.archive.push({key,mode,date:d.dataset.date,monday:P().monday,savedAt:now,sessions:sess,html:d.innerHTML,door:(mode==='we'&&!$('doorWrap').hidden)?$('doorSheet').innerHTML:''});
+  });
+  pruneArchive();
+  save(); toast('확정했습니다. 보관함에서 다시 볼 수 있습니다');
   makeImages();
 };
+/* ---------- 보관함: 이번 주와 지난주만 ---------- */
+function pruneArchive(){
+  S.archive=S.archive||[];
+  const d=parse(mondayOf(iso(new Date()))); d.setDate(d.getDate()-7); const keep=iso(d);
+  const n=S.archive.length; S.archive=S.archive.filter(a=>a.monday>=keep);
+  return n!==S.archive.length;
+}
+function renderArchive(){
+  if(pruneArchive()) save();
+  const box=$('arcList'); box.innerHTML='';
+  const list=(S.archive||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||a.mode.localeCompare(b.mode));
+  if(!list.length){box.innerHTML='<span class="legend">보관된 계획표가 없습니다. 주중·주말 메뉴에서 "확정 + 이미지"를 누르면 여기에 보관됩니다.</span>';return;}
+  list.forEach(a=>{
+    const t=new Date(a.savedAt);
+    const c=document.createElement('div'); c.className='arc';
+    c.innerHTML=`<div class="arc-head"><h3>${esc(md(a.date)+' ('+DAYS[dowOf(a.date)]+') · '+(a.mode==='we'?'주말':'주중'))}</h3>
+      <div class="row" style="gap:6px"><span class="legend">확정 ${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}</span>${canEdit(a)?'<button class="b ghost sm" data-load>불러와서 수정</button>':(a.date<iso(new Date())?'<span class="pill">지난 봉사</span>':'')}<button class="b sm" data-img>이미지 보기</button><button class="b warn sm" data-x>삭제</button></div></div>
+      <div class="sheet-scroll"><div class="sheetbox arc-sheet">${a.html}</div></div>
+      ${a.door?`<div class="sheet-scroll"><div class="doorbox arc-door">${a.door}</div></div>`:''}`;
+    const bImg=c.querySelector('[data-img]'), bDel=c.querySelector('[data-x]'), bLoad=c.querySelector('[data-load]');
+    if(bLoad) bLoad.onclick=()=>loadArchive(a);
+    bImg.onclick=()=>imagesFrom([c.querySelector('.arc-sheet'),c.querySelector('.arc-door')].filter(Boolean));
+    bDel.onclick=()=>{
+      if(bDel.dataset.sure){S.archive=S.archive.filter(x=>x.key!==a.key);save();renderArchive();return;}
+      bDel.dataset.sure='1';bDel.textContent='한 번 더 누르면 삭제';setTimeout(()=>{if(bDel.isConnected){delete bDel.dataset.sure;bDel.textContent='삭제';}},3000);
+    };
+    box.appendChild(c);
+  });
+}
+// 봉사 당일 전(당일 포함)까지는 불러와서 수정 가능
+function canEdit(a){ return Array.isArray(a.sessions)&&a.sessions.length&&a.date>=iso(new Date()); }
+function loadArchive(a){
+  const p=plans[a.mode];
+  if(p.monday!==a.monday) setupWeek(a.mode,a.monday,false);
+  p.sessions=p.sessions.filter(x=>x.date!==a.date).concat(a.sessions.map(x=>Object.assign(JSON.parse(JSON.stringify(x)),{id:uid++,msg:null})));
+  tab(a.mode);
+  toast('확정된 계획을 불러왔습니다. 수정 후 다시 "확정"을 누르세요');
+  $('editPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function imagesFrom(nodes){
+  if(typeof html2canvas!=='function'){toast('이미지 기능을 불러오지 못했습니다. 인터넷 연결을 확인하세요');return;}
+  const out=$('imgOut'); out.innerHTML='<span class="legend">이미지를 만드는 중…</span>'; $('imgModal').hidden=false;
+  const imgs=[];
+  for(const n of nodes){ const c=await html2canvas(n,{scale:2,backgroundColor:'#ffffff'}); const img=document.createElement('img'); img.src=c.toDataURL('image/png'); img.alt='계획표 이미지'; imgs.push(img); }
+  out.innerHTML=''; imgs.forEach(i=>out.appendChild(i));
+}
 async function makeImages(){
   if(typeof html2canvas!=='function'){toast('이미지 기능을 불러오지 못했습니다. 인터넷 연결을 확인하세요');return;}
   const out=$('imgOut'); out.innerHTML='<span class="legend">이미지를 만드는 중…</span>'; $('imgModal').hidden=false;
@@ -738,11 +806,12 @@ async function makeImages(){
 }
 $('toImg').onclick=makeImages;
 $('imgClose').onclick=()=>$('imgModal').hidden=true;
-['wd','we','set'].forEach(t=>$('tab-'+t).onclick=()=>tab(t));
+['wd','we','arc','set'].forEach(t=>$('tab-'+t).onclick=()=>tab(t));
 function tab(t){
-  ['wd','we','set'].forEach(x=>$('tab-'+x).setAttribute('aria-selected',x===t));
-  $('view-set').hidden=t!=='set'; $('view-plan').hidden=t==='set';
+  ['wd','we','arc','set'].forEach(x=>$('tab-'+x).setAttribute('aria-selected',x===t));
+  $('view-set').hidden=t!=='set'; $('view-arc').hidden=t!=='arc'; $('view-plan').hidden=t==='set'||t==='arc';
   if(t==='set'){renderSettings();return;}
+  if(t==='arc'){renderArchive();return;}
   mode=t; sel=null; renderSessions(); renderAll();
 }
 
