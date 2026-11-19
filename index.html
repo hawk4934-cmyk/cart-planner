@@ -74,7 +74,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .area{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;background:var(--bg);min-width:0}
 .area .ln{display:flex;gap:6px;align-items:center}
 .area .ln span{font-size:12px;color:var(--muted);width:62px;flex:none}
-.area input{width:100%}
+.area input,.area textarea{width:100%}
+.area textarea{min-height:0;resize:vertical;line-height:1.4}
+.area .ln.top{align-items:flex-start}
+.area .ln.top span{padding-top:9px}
 /* 호별구역 안내 이미지: 고정 색 */
 .doorbox{background:#ffffff;color:#111;width:900px;border:2px solid #111;font-family:var(--f-body)}
 .doorbox .dt{background:#c4ef1c;text-align:center;font-weight:800;font-size:30px;padding:18px 10px}
@@ -83,7 +86,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .doorbox .dc:nth-child(odd){border-right:2px solid #111}
 .doorbox .dc.span{grid-column:1 / -1;border-right:0}
 .doorbox .dh{font-weight:800;font-size:22px;margin-bottom:10px}
-.doorbox .dl{font-weight:700;font-size:18px}
+.doorbox .dl{font-weight:700;font-size:18px;line-height:1.45}
 .doorbox .dn{background:#fbf3df;font-weight:700;font-size:18px;white-space:pre-line;line-height:1.7}
 /* 완성 표: 밴드 게시용 이미지와 같은 모양이라 테마와 무관하게 고정 색 */
 .sheetbox{background:#ffffff;color:#1b2b33;padding:10px;width:max-content;min-width:100%;font-family:var(--f-body)}
@@ -93,7 +96,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .sheetbox th,.sheetbox td{border:1px solid #9fb8c2;padding:6px 12px;text-align:center;white-space:nowrap;font-size:15px}
 .sheetbox th{background:#dcebf1;color:#16627c;font-size:16px;font-weight:800}
 .sheetbox td.t{color:#16627c;font-weight:800;font-variant-numeric:tabular-nums;background:#f3f8fa;width:90px}
-.sheetbox td.t.big{font-family:var(--f-display);font-size:22px;font-weight:400;line-height:1.2;white-space:normal}
+.sheetbox td.t.big{font-family:var(--f-display);font-size:22px;font-weight:400;line-height:1.2;white-space:nowrap;padding:6px 14px}
 .sheetbox td:not(.t){min-width:170px}
 .sheetbox tr.cyc td{border-top:2px solid #16627c}
 .sheetbox td.empty{background:#fafcfd}
@@ -456,7 +459,7 @@ function renderSessions(){
         <label class="f">요일<select id="dw${s.id}">${[1,2,3,4,5,6,0].map(w=>`<option value="${w}"${w==s.dow?' selected':''}>${DAYS[w]}요일</option>`).join('')}</select></label>
         <label class="f">시작<input type="time" id="st${s.id}" value="${s.start}"></label>
         <label class="f">끝<input type="time" id="en${s.id}" value="${s.end}"></label>
-        <label class="f">교대<select id="rt${s.id}"><option value="2"${s.rot==2?' selected':''}>2교대</option><option value="3"${s.rot==3?' selected':''}>3교대</option></select></label>
+        <label class="f">교대<select id="rt${s.id}"><option value="2"${s.rot==2?' selected':''}>2교대</option><option value="3"${s.rot==3?' selected':''}>3교대</option><option value="4"${s.rot==4?' selected':''}>4교대</option></select></label>
         <label class="f">장소 수<select id="nl${s.id}"><option value="0">자동</option>${S.locations.filter(l=>l.on).map((l,i)=>`<option value="${i+1}"${s.nLoc==i+1?' selected':''}>${i+1}곳</option>`).join('')}</select></label>
       </div>
       <div class="legend" id="nlh${s.id}"></div>
@@ -660,7 +663,13 @@ function doorLabel(loc,i){
   const m=loc.match(/\(([^)]+)\)/);
   return String.fromCharCode(65+i)+'팀('+(m?m[1]:loc)+')';
 }
-function doorRows(){ const ss=P().sessions.filter(s=>s.result); return Math.max(3,...ss.map(s=>+s.rot)); }
+// 호별구역 안내 줄 수 = 주말 교대 수 (편성 결과에 교대 줄이 더 있으면 그만큼)
+function doorRows(){
+  const ss=P().sessions;
+  const rots=ss.map(s=>+s.rot).concat(ss.filter(s=>s.result).flatMap(s=>s.result.teams.map(t=>t.pairs.length)));
+  if(!rots.length) rots.push(...S.schedule.we.map(x=>+x.rot));
+  return Math.max(1,...(rots.length?rots:[3]));
+}
 function defaultTitle(){
   const ss=sortSess(P().sessions); const s=ss[0]; if(!s) return '호별봉사 병행구역 배분';
   return `${DAYS[s.dow]}요일 ${(+s.start.split(':')[0])<12?'오전':'오후'} 호별봉사 병행구역 배분`;
@@ -679,12 +688,12 @@ function renderDoor(){
     let h=`<div class="legend">${esc(loc)}</div>
       <div class="ln"><span>팀 이름</span><input data-lab="${esc(loc)}" value="${esc(doorLabel(loc,i))}"></div>
       <div class="ln"><span>구역번호</span><input data-no="${esc(loc)}" value="${esc(A.no)}" placeholder="예: 325번 半"></div>`;
-    for(let r=0;r<R;r++) h+=`<div class="ln"><span>${ORD[r]||(r+1)+'번째팀'}</span><input data-ln="${esc(loc)}|${r}" value="${esc(A.lines[r]||'')}" placeholder="예: 101동 15층만"></div>`;
+    for(let r=0;r<R;r++){ const v=A.lines[r]||''; h+=`<div class="ln top"><span>${ORD[r]||(r+1)+'번째팀'}</span><textarea data-ln="${esc(loc)}|${r}" rows="${Math.max(2,v.split('\n').length)}" placeholder="예: 101동 15층만 (여러 줄 가능)">${esc(v)}</textarea></div>`; }
     c.innerHTML=h; box.appendChild(c);
   });
   box.querySelectorAll('[data-lab]').forEach(e=>e.oninput=()=>{S.doorLabels=S.doorLabels||{};S.doorLabels[e.dataset.lab]=e.value;save();renderDoorSheet();});
   box.querySelectorAll('[data-no]').forEach(e=>e.oninput=()=>{areaOf(D,e.dataset.no).no=e.value;save();renderDoorSheet();});
-  box.querySelectorAll('[data-ln]').forEach(e=>e.oninput=()=>{const [loc,r]=e.dataset.ln.split('|');areaOf(D,loc).lines[+r]=e.value;save();renderDoorSheet();});
+  box.querySelectorAll('[data-ln]').forEach(e=>e.oninput=()=>{const [loc,r]=e.dataset.ln.split('|');areaOf(D,loc).lines[+r]=e.value;e.rows=Math.max(2,e.value.split('\n').length);save();renderDoorSheet();});
   renderDoorSheet();
 }
 $('doorTitle').oninput=e=>{doorData().title=e.target.value;save();renderDoorSheet();};
@@ -695,7 +704,7 @@ function renderDoorSheet(){
   const cells=locs.map((loc,i)=>{
     const A=areaOf(D,loc); const no=(A.no||'').trim();
     let h=`<div class="dh">${esc(doorLabel(loc,i))} 구역번호: ${esc(no?(/번|半|반/.test(no)?no:no+'번'):'번')}</div>`;
-    for(let r=0;r<R;r++) h+=`<div class="dl">${ORD[r]||(r+1)+'번째팀'}: ${esc(A.lines[r]||'')}</div>`;
+    for(let r=0;r<R;r++){ const v=(A.lines[r]||'').trim(); h+=`<div class="dl">${ORD[r]||(r+1)+'번째팀'}: ${esc(v).replace(/\n/g,'<br>')}</div>`; }
     return `<div class="dc">${h}</div>`;
   });
   const notice=(D.notice||'').trim();
@@ -824,7 +833,7 @@ function renderSched(){
       d.innerHTML=`<label class="f">요일<select data-k="dow">${[1,2,3,4,5,6,0].map(w=>`<option value="${w}"${w==sc.dow?' selected':''}>${DAYS[w]}요일</option>`).join('')}</select></label>
         <label class="f">시작<input type="time" data-k="start" value="${sc.start}"></label>
         <label class="f">끝<input type="time" data-k="end" value="${sc.end}"></label>
-        <label class="f">교대<select data-k="rot"><option value="2"${sc.rot==2?' selected':''}>2교대</option><option value="3"${sc.rot==3?' selected':''}>3교대</option></select></label>
+        <label class="f">교대<select data-k="rot"><option value="2"${sc.rot==2?' selected':''}>2교대</option><option value="3"${sc.rot==3?' selected':''}>3교대</option><option value="4"${sc.rot==4?' selected':''}>4교대</option></select></label>
         <button class="b warn sm">삭제</button>`;
       d.querySelectorAll('[data-k]').forEach(e=>e.onchange=()=>{const k=e.dataset.k;sc[k]=(k==='dow'||k==='rot')?+e.value:e.value;save();});
       d.querySelector('button').onclick=()=>{S.schedule[m].splice(i,1);save();renderSched();};
